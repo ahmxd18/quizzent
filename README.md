@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-Frontend setup: React, TypeScript, Vite, Tailwind CSS, and a TanStack Query provider. The starting screen is a placeholder. A small Express/TypeScript API provides a health endpoint. PostgreSQL connection setup and the initial account/session tables are ready; authentication endpoints, competitions, and sockets are not implemented yet.
+The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Join/signup/login screens are clearly marked previews with submission disabled. A small Express/TypeScript API provides a health endpoint. PostgreSQL connection setup and the initial account/session tables are ready; authentication endpoints, competitions, and sockets are not implemented yet.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
@@ -51,9 +51,16 @@ Vite's `/api` proxy is local tooling, not a production API gateway. `preview` is
 
 ```text
 src/
-  App.tsx              Starting screen
-  main.tsx             React entry point and app providers
-  index.css            Tailwind import, named colour tokens, and base styles
+  App.tsx              Root route composition
+  main.tsx             React entry point
+  app/                 Providers, routes, site shell, and not-found page
+  components/ui/       Generic Button, TextField, Card, and Badge
+  components/layout/   Generic PageContainer
+  features/home/       Homepage sections and page composition
+  features/join/       Guest join preview components and page
+  features/auth/       Organiser account preview components and page
+  styles/              Named colour tokens and shared base styles
+  index.css            Stylesheet imports
   lib/query-client.ts  Shared TanStack Query cache
 server/
   src/app.ts           Express routes
@@ -69,13 +76,16 @@ docs/
   development-plan.txt Ordered milestones and checks
   postgresql-setup.md   Local setup and plain-language database explanations
   database-schema.md    Account/session tables and migration commands
+  frontend-design.md    Palette options, contrast checks, and component boundaries
 ```
 
-Add reusable components to `src/components/` when there is an actual component to share. Keep feature-specific components beside their feature. Avoid creating empty layers in advance.
+Keep generic primitives in `src/components/`. Feature-specific UI goes in `src/features/<feature>/components/`, with route-level composition in that feature's `pages/`. Application-wide routing/header/footer live in `src/app/`. Shared components must not import features. See the [frontend design guide](docs/frontend-design.md).
+
+Routes: `/` (home), `/join`, `/login`, `/signup`, and a not-found fallback. Hosting must eventually serve `index.html` for frontend routes while preserving `/api` handling; the Vite development server already supports direct route loading.
 
 ## Stack
 
-- Frontend: React, Vite, TypeScript, Tailwind CSS, TanStack Query.
+- Frontend: React, Vite, TypeScript, Tailwind CSS, TanStack Query, React Router, Lucide icons.
 - Backend foundation: Node.js, Express, TypeScript, PostgreSQL via pg.
 - Planned backend addition: Socket.IO.
 - Hosting: aim for free or minimal cost; select providers when deployment is needed.
@@ -84,7 +94,8 @@ Add reusable components to `src/components/` when there is an actual component t
 
 - **Vite** runs the development server and prepares browser assets for deployment.
 - **TypeScript** checks types before the application runs; external input still needs runtime validation.
-- **Tailwind theme tokens** in `src/index.css` create utilities such as `text-brand` and `bg-canvas`. Define colours there instead of repeating raw values in components. This uses [Tailwind's Vite plugin](https://tailwindcss.com/docs/installation/using-vite).
+- **Tailwind theme tokens** in `src/styles/tokens.css` create utilities such as `text-brand` and `bg-canvas`. Define colours there instead of repeating raw values in components. This uses [Tailwind's Vite plugin](https://tailwindcss.com/docs/installation/using-vite).
+- **React Router** maps URLs to page components without a full-page reload. `Outlet` renders the current page inside the shared header/footer. Route changes update the page title and move focus to the new main content.
 - **TanStack Query** will manage data fetched from the backend. `QueryClientProvider` makes its shared cache available throughout React. No API calls are made yet.
 - **PostgreSQL** stores related data in tables, roughly like linked spreadsheets. See the [local PostgreSQL guide](docs/postgresql-setup.md) for setup and the [schema guide](docs/database-schema.md) for the first tables.
 - **Express** defines HTTP routes. `GET /api/health` responds with JSON, while unknown routes return a JSON 404. [Express introduction](https://expressjs.com/en/starter/hello-world/).

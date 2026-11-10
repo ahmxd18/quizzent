@@ -43,11 +43,13 @@ FOUNDATION
     Check: connect locally, apply migrations to an empty database, reject duplicates.
     Split connection setup and initial tables into separate commits.
 
-05. [ ] Frontend navigation and shared UI basics
+05. [x] Frontend navigation and shared UI basics
     Add routing, a simple page layout, and reusable input/button components.
     Add loading, empty, and error states as actual screens need them.
     Keep the placeholder until real features replace it; avoid a large UI framework.
     Check: navigation, keyboard use, mobile layout, and existing builds.
+    Added plum/citron tokens, UI primitives, responsive home and preview routes.
+    Generic components: src/components/. Feature UI: src/features/<feature>/components/.
 
 FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
 
@@ -149,7 +151,7 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–04 are complete. The first account/session migration is applied locally
-and covered by isolated database integration tests.
-Next: step 05, frontend navigation and the few shared components needed for the
-upcoming organiser signup/login screens. Authentication behaviour remains step 06.
+Steps 01–05 are complete. The account/session migration is applied locally;
+frontend theme, shared controls, routing, and clearly labelled preview screens exist.
+Next: step 06, organiser authentication. Start with a small signup backend commit,
+then connect the signup screen before moving to login/logout and session restoration.

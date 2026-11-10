@@ -8,6 +8,8 @@ Quizzent is a learning and resume project. Build one feature at a time, keep the
 
 - Stack: React with Vite and TypeScript, Tailwind CSS, TanStack Query, Express on Node.js, Socket.IO, and PostgreSQL.
 - Use reusable components where they are useful and named CSS colour variables instead of inline colour values.
+- Avoid blue branding. The current design uses deep plum, soft citron, and warm ivory.
+- Keep generic UI in src/components/ and feature-specific UI in src/features/<feature>/components/; keep routes/providers and application chrome in src/app/.
 - Organisers register through organiser signup. Superadmin privileges are never granted through public signup.
 - Competitors can join as guests using a room code or invitation link.
 - Generate guest names from English words; competitors may edit them. Names must be unique within the competition.
