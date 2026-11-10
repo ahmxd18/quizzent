@@ -32,9 +32,9 @@ FOUNDATION
     Check: lint, both builds, direct health response, and Vite-proxied response.
     Commit: chore: add Express TypeScript server foundation
 
-04. [ ] PostgreSQL connection and first migration
+04. [x] PostgreSQL connection and first migration
     [x] Local PostgreSQL installation, dedicated login/database, and pg connection check.
-    [ ] First migration for organiser accounts and server-side sessions.
+    [x] First migration for organiser accounts and server-side sessions.
     Choose a free local PostgreSQL installation method before installing it.
     Add the pg driver and a server-only DATABASE_URL environment variable.
     Introduce a migration: a numbered SQL file that changes database structure.
@@ -149,6 +149,7 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–03 and the connection portion of step 04 are complete.
-Next: introduce the first numbered migration and account/session tables in a
-separate commit, with examples of primary keys and unique constraints.
+Steps 01–04 are complete. The first account/session migration is applied locally
+and covered by isolated database integration tests.
+Next: step 05, frontend navigation and the few shared components needed for the
+upcoming organiser signup/login screens. Authentication behaviour remains step 06.

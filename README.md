@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-Frontend setup: React, TypeScript, Vite, Tailwind CSS, and a TanStack Query provider. The starting screen is a placeholder. A small Express/TypeScript API provides a health endpoint. PostgreSQL connection setup is ready; application tables, authentication, competitions, and sockets are not implemented yet.
+Frontend setup: React, TypeScript, Vite, Tailwind CSS, and a TanStack Query provider. The starting screen is a placeholder. A small Express/TypeScript API provides a health endpoint. PostgreSQL connection setup and the initial account/session tables are ready; authentication endpoints, competitions, and sockets are not implemented yet.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
@@ -41,6 +41,8 @@ npm run build      # Build the frontend and type-check/compile the backend
 npm run preview    # Preview the frontend build only
 npm run start:server # Run the compiled backend after building
 npm run db:check    # Verify the local PostgreSQL connection
+npm run db:migrate  # Apply pending database migrations
+npm run test:db     # Check migration/constraints in an isolated temporary schema
 ```
 
 Vite's `/api` proxy is local tooling, not a production API gateway. `preview` is also a local preview, not a deployment server. Production hosting and API routing will be configured in the deployment step; the backend currently binds to this computer only.
@@ -60,10 +62,13 @@ server/
   .env.example         Optional backend environment settings
   src/database.ts      PostgreSQL connection pool factory
   src/check-database.ts One-off database connection check
+  migrations/          Numbered SQL changes
+  tests/               Database integration tests
 docs/
   project-decisions.md Confirmed scope and implementation notes
   development-plan.txt Ordered milestones and checks
   postgresql-setup.md   Local setup and plain-language database explanations
+  database-schema.md    Account/session tables and migration commands
 ```
 
 Add reusable components to `src/components/` when there is an actual component to share. Keep feature-specific components beside their feature. Avoid creating empty layers in advance.
@@ -81,7 +86,7 @@ Add reusable components to `src/components/` when there is an actual component t
 - **TypeScript** checks types before the application runs; external input still needs runtime validation.
 - **Tailwind theme tokens** in `src/index.css` create utilities such as `text-brand` and `bg-canvas`. Define colours there instead of repeating raw values in components. This uses [Tailwind's Vite plugin](https://tailwindcss.com/docs/installation/using-vite).
 - **TanStack Query** will manage data fetched from the backend. `QueryClientProvider` makes its shared cache available throughout React. No API calls are made yet.
-- **PostgreSQL** stores related data in tables, roughly like linked spreadsheets. The connection is ready; tables come next. See the [local PostgreSQL guide](docs/postgresql-setup.md) for setup and terminology.
+- **PostgreSQL** stores related data in tables, roughly like linked spreadsheets. See the [local PostgreSQL guide](docs/postgresql-setup.md) for setup and the [schema guide](docs/database-schema.md) for the first tables.
 - **Express** defines HTTP routes. `GET /api/health` responds with JSON, while unknown routes return a JSON 404. [Express introduction](https://expressjs.com/en/starter/hello-world/).
 - **tsx** runs backend TypeScript during development. The build uses `tsc` to produce ordinary JavaScript in `server/dist/`. That is why `index.ts` imports `./app.js`: the import must still work after compilation.
 - **NodeNext** tells TypeScript to follow Node's module rules for the backend, rather than the frontend bundler's rules.

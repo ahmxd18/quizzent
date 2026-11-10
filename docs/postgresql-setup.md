@@ -8,7 +8,7 @@
 - `quizzent` is its login and owner, without superuser, role-management, or database-creation privileges.
 - The generated password is saved only in ignored `server/.env`, readable by this macOS user.
 - Password authentication is required for this login's IPv4 localhost connection.
-- No application tables exist yet. Account/session tables come in the first migration.
+- The first migration creates `users` and `user_sessions`. See the [schema guide](database-schema.md) for fields and commands.
 
 Run from the project folder:
 
@@ -80,6 +80,6 @@ Postgres.app may ask permission for a local SQL client to connect during initial
 - **Migration:** a numbered file that records a database structure change so another installation can apply the same change.
 - **Transaction:** several database changes that either all succeed or all get rolled back.
 
-We will introduce the first tables in a separate change. No ORM, cloud database, or Redis is needed for this connection step.
+The first tables are defined in a numbered SQL migration. `node-pg-migrate` tracks which files have run; it is not an ORM. No cloud database or Redis is needed.
 
 Connection code follows [node-postgres pooling guidance](https://node-postgres.com/features/pooling).
