@@ -33,6 +33,8 @@ FOUNDATION
     Commit: chore: add Express TypeScript server foundation
 
 04. [ ] PostgreSQL connection and first migration
+    [x] Local PostgreSQL installation, dedicated login/database, and pg connection check.
+    [ ] First migration for organiser accounts and server-side sessions.
     Choose a free local PostgreSQL installation method before installing it.
     Add the pg driver and a server-only DATABASE_URL environment variable.
     Introduce a migration: a numbered SQL file that changes database structure.
@@ -147,5 +149,6 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-This pass covers the plan and step 03 only. PostgreSQL setup comes next so the
-installation choice and basic concepts can be explained before changing the machine.
+Steps 01–03 and the connection portion of step 04 are complete.
+Next: introduce the first numbered migration and account/session tables in a
+separate commit, with examples of primary keys and unique constraints.
