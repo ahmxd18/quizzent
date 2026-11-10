@@ -4,4 +4,10 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      // Browser requests to /api go to Express during local development.
+      '/api': 'http://127.0.0.1:3001',
+    },
+  },
 })

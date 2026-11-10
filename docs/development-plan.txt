@@ -24,7 +24,7 @@ FOUNDATION
     Keep confirmed rules in project-decisions.md and implementation order here.
     Commit: docs: add ordered development plan
 
-03. [ ] Minimal backend and local frontend/backend connection
+03. [x] Minimal backend and local frontend/backend connection
     Add Express + TypeScript under server/, retaining the existing frontend.
     Add GET /api/health, a server build, and local development commands.
     Forward /api requests from Vite to Express during development.
