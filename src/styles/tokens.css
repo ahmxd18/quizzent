@@ -1,0 +1,26 @@
+@theme {
+  /* Components use these names; raw colour values stay in this file. */
+  --color-*: initial;
+  --color-brand: #5b2b64;
+  --color-brand-hover: #47214f;
+  --color-brand-soft: #efe5f0;
+  --color-on-brand: #fffefb;
+  --color-accent: #d9ec91;
+  --color-accent-hover: #c9df75;
+  --color-canvas: #faf8f2;
+  --color-surface: #fffefb;
+  --color-surface-strong: #f0ebe9;
+  --color-foreground: #302832;
+  --color-muted: #6d626c;
+  --color-outline: #e1d9e1;
+  --color-control: #958497;
+  --color-focus: #7e4185;
+  --color-success: #2f6b48;
+  --color-warning: #88531c;
+  --color-danger: #ad314a;
+
+  --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --radius-card: 1.75rem;
+  --shadow-card: 0 18px 60px -32px color-mix(in srgb, var(--color-foreground) 35%, transparent);
+}
