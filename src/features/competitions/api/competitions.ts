@@ -1,7 +1,7 @@
 import { getJson, postJson, putJson } from '../../../lib/http'
 
 export type CompetitionInput = { title: string; description: string; questionTimeSeconds: number }
-export type Competition = CompetitionInput & { id: string; status: 'draft'; createdAt: string; updatedAt: string }
+export type Competition = CompetitionInput & { id: string; status: 'draft' | 'published'; createdAt: string; updatedAt: string; publishedAt: string | null }
 type CompetitionResponse = { competition: Competition }
 
 export const listCompetitions = () => getJson<{ competitions: Competition[] }>('/api/competitions')
