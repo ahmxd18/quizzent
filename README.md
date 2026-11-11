@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Organisers can sign up, log in, restore their session after refresh, and log out. A protected organiser page shows the signed-in account. PostgreSQL stores accounts and hashed session tokens. Guest joining remains a preview; competition creation and sockets are next.
+The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Organisers can sign up, log in, restore their session after refresh, and log out. Their private library supports creating and editing competition drafts, with validation and unsaved-change warnings. PostgreSQL stores accounts, hashed session tokens, and drafts. Question editing is next; guest joining remains a preview and sockets are not implemented yet.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
@@ -43,7 +43,7 @@ npm run start:server # Run the compiled backend after building
 npm run db:check    # Verify the local PostgreSQL connection
 npm run db:migrate  # Apply pending database migrations
 npm run test:db     # Check migration/constraints in an isolated temporary schema
-npm run test:server # Run schema, signup, and login/session integration tests
+npm run test:server # Run schema, auth, and competition ownership/validation tests
 ```
 
 Vite's `/api` proxy is local tooling, not a production API gateway. `preview` is also a local preview, not a deployment server. Production hosting and API routing will be configured in the deployment step; the backend currently binds to this computer only.
@@ -61,6 +61,7 @@ src/
   features/join/       Guest join preview components and page
   features/auth/       Signup/login forms, session hooks, and protected routing
   features/organiser/  Protected organiser overview
+  features/competitions/ Draft library, shared editor, API calls, and hooks
   styles/              Named colour tokens and shared base styles
   index.css            Stylesheet imports
   lib/query-client.ts  Shared TanStack Query cache
@@ -81,14 +82,17 @@ docs/
   database-schema.md    Account/session tables and migration commands
   organiser-signup.md   Signup API, hashing, validation, and frontend flow
   organiser-login.md    Login, cookies, session expiry, logout, and frontend flow
+  competition-drafts.md Draft API, ownership, database fields, and editor behavior
   frontend-design.md    Palette options, contrast checks, and component boundaries
 ```
 
 Keep generic primitives in `src/components/`. Feature-specific UI goes in `src/features/<feature>/components/`, with route-level composition in that feature's `pages/`. Application-wide routing/header/footer live in `src/app/`. Shared components must not import features. See the [frontend design guide](docs/frontend-design.md).
 
-Routes: `/` (home), `/join`, `/login`, `/signup`, `/organiser` (requires login), and a not-found fallback. Hosting must eventually serve `index.html` for frontend routes while preserving `/api` handling; the Vite development server already supports direct route loading.
+Routes: `/` (home), `/join`, `/login`, `/signup`, `/organiser` (requires login), `/organiser/competitions/new`, `/organiser/competitions/:id/edit`, and a not-found fallback. Hosting must eventually serve `index.html` for frontend routes while preserving `/api` handling; the Vite development server already supports direct route loading.
 
 To try authentication, create an account at `/signup`, continue to `/login`, and enter its email and password. Refresh `/organiser` to check session restoration, then log out. API clients testing login/logout must send `X-Quizzent-Request: 1` and retain the response cookie. See the [login guide](docs/organiser-login.md).
+
+From `/organiser`, choose Create your first competition. Save a title, optional description, and question time (default 10 seconds, allowed 5–120). The draft appears in your library; select Edit draft to update it. Saving does not publish or open a room. See the [draft guide](docs/competition-drafts.md).
 
 ## Stack
 
@@ -115,6 +119,6 @@ To try authentication, create an account at `/signup`, continue to `/login`, and
 
 The initial commit on `main` contains setup only. Continue work on a separate feature branch and merge reviewed changes through pull requests. Keep changes small and focused on one feature at a time.
 
-The foundation milestone was merged through [PR #1](https://github.com/ahmxd18/quizzent/pull/1), followed by signup in [PR #2](https://github.com/ahmxd18/quizzent/pull/2). Login and sessions are on `feature/organiser-login`, based on updated `main`. Finish and merge each feature before starting its successor from main.
+Foundation, signup, and login were merged through [PR #1](https://github.com/ahmxd18/quizzent/pull/1), [PR #2](https://github.com/ahmxd18/quizzent/pull/2), and [PR #3](https://github.com/ahmxd18/quizzent/pull/3). Draft creation/listing/editing is on `feature/competition-drafts`, based on updated `main`. Finish and merge each feature before starting its successor from main.
 
 Explain unfamiliar TypeScript, Socket.IO, and PostgreSQL concepts briefly as they appear. Use short, natural code comments where they clarify a decision. Never commit real credentials or `.env` files.

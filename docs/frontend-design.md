@@ -66,6 +66,6 @@ Atomic here means small, composable pieces. We do not add separate atom/molecule
 - Prefer direct imports. Avoid barrels, polymorphic component APIs, global state, and abstractions before there is a need.
 - Enable TypeScript strict checking. Keep comments focused on decisions rather than narrating JSX.
 
-Routing uses React Router's declarative mode; a larger framework is unnecessary for the current client application. Signup and login connect to the backend. The organiser page requires a valid session; guest joining remains a clearly marked preview.
+Routing uses React Router's data-router mode through createBrowserRouter/RouterProvider, enabling supported navigation blocking for unsaved draft edits. TanStack Query handles API state; no framework or loader migration is needed. Signup/login and private draft create/list/edit flows connect to the backend. Guest joining remains a clearly marked preview. TextareaField and the themed HTML ConfirmDialog join the generic controls; competition-specific UI stays inside its feature.
 
 Sources: [WCAG 2.2](https://www.w3.org/TR/WCAG22/) and [React Router declarative mode](https://reactrouter.com/start/modes).

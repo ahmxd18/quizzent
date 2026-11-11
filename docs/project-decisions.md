@@ -17,6 +17,8 @@ Quizzent is a learning and resume project. Build one feature at a time, keep the
 - Target 30–50 competitors per room, capped at 50 for the MVP. This is a target to validate, not a measured capacity guarantee.
 - An organiser may host only one active room at a time.
 - Every question in a competition uses the same organiser-configured time limit, defaulting to 10 seconds.
+- Drafts use a compact library and dedicated create/edit pages, with manual saving and unsaved-change warnings.
+- Draft title: trimmed 1–100 characters; optional description: trimmed up to 500 characters; question time: whole seconds from 5 to 120.
 - Count only currently ready competitors toward the minimum.
 - After the configured lobby countdown expires, reaching the minimum triggers a short five-second start countdown.
 - Every competitor receives all questions in a persisted, independently randomised sequence.

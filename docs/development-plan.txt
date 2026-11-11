@@ -63,7 +63,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Check: invalid input, duplicate email, wrong password, logout, unauthorised access.
     Commit backend authentication and frontend forms separately.
 
-07. [ ] Create, list, and edit competition drafts
+07. [x] Create, list, and edit competition drafts
     Add organiser-owned competitions and basic settings, including default 10 seconds.
     Add a simple organiser dashboard and draft form.
     Check: ownership, invalid settings, and attempts to edit someone else's draft.
@@ -154,10 +154,11 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–06 are complete. Foundation and signup were merged through PRs #1 and #2.
-Login/logout, 24-hour server-side sessions, refresh restoration, and the protected
-organiser page are implemented on feature/organiser-login, with separate backend
-and frontend commits. All 22 database/API checks pass; browser login, refresh,
-logout, protected navigation, and mobile layouts were checked.
-Next: review/merge login, then start competition drafts (step 07) on a new branch.
-The guest join screen is still a preview. No live competitions or sockets exist yet.
+Steps 01–07 are complete. Foundation, signup, and login were merged through PRs
+#1–#3. Private competition drafts are implemented on feature/competition-drafts,
+with separate migration, API, library, and editor commits. All 30 database/API
+checks pass. Browser creation, editing, validation, refresh, discard/keep-editing,
+unsaved-refresh warning, and mobile layouts were checked.
+Next: review/merge drafts, then start question editing and publication (step 08)
+on a new focused branch. The guest join screen is still a preview. No live rooms
+or sockets exist yet.
