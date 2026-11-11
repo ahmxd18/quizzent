@@ -42,7 +42,6 @@ export function SignupForm({ onCreated }: { onCreated: (displayName: string) => 
         </Button>
       </fieldset>
       <p className="text-center text-sm text-muted">Already have an account? <Link to="/login" className="rounded-sm font-semibold text-brand underline underline-offset-4">Log in</Link></p>
-      <p className="text-center text-xs leading-relaxed text-muted">Account creation is available now. Organiser sign-in is coming next.</p>
     </form>
   )
 }

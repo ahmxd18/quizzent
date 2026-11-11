@@ -17,7 +17,7 @@
 - Password: 15–128 characters. Spaces are preserved. This is the initial password policy; no mandatory punctuation rules.
 - Other fields, including `role` and `status`, are rejected.
 
-A successful `201` response contains only `user.id`, `user.displayName`, `user.email`, and `user.role`. The role is always `organiser`. No session or cookie is issued by signup; login is a separate next step. Email verification and recovery are also not implemented yet.
+A successful `201` response contains only `user.id`, `user.displayName`, `user.email`, and `user.role`. The role is always `organiser`. No session or cookie is issued by signup; the success screen links to the separate login flow. See [login and sessions](organiser-login.md). Email verification and recovery are not implemented yet.
 
 | Status | Meaning |
 | --- | --- |
@@ -33,7 +33,7 @@ Returning 409 deliberately reveals that an email is registered, in exchange for 
 ## How the code is separated
 
 - `signup.schema.ts`: Zod checks unknown input at runtime and normalises name/email. TypeScript alone cannot validate an HTTP request.
-- `password.ts`: asynchronous Node scrypt with a fresh random salt. A salt makes identical passwords produce different hashes. The saved format includes algorithm, work parameters, salt, and derived hash for future login verification.
+- `password.ts`: asynchronous Node scrypt with a fresh random salt. A salt makes identical passwords produce different hashes. The saved format includes algorithm, work parameters, salt, and derived hash for login verification.
 - `signup.service.ts`: hashes the password and inserts a fixed-role organiser using SQL parameters (`$1`, `$2`, `$3`). The email unique index handles concurrent duplicates.
 - `signup.routes.ts`: HTTP parsing, limits, validation, status codes, and safe response fields.
 - `middleware/error-handler.ts`: consistent errors without exposing request bodies, passwords, or database details.

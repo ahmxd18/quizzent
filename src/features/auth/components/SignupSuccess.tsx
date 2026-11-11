@@ -12,8 +12,8 @@ export function SignupSuccess({ displayName }: { displayName: string }) {
     <Card className="p-7 sm:p-10">
       <Badge tone="accent"><Check size={15} aria-hidden="true" />Account created</Badge>
       <h1 ref={headingRef} tabIndex={-1} className="mt-6 text-3xl font-semibold tracking-tight focus-visible:outline-none">You’re an organiser.</h1>
-      <p className="mt-4 break-words text-sm leading-relaxed text-muted">Your account is ready, {displayName}. You’re not signed in yet; organiser sign-in will be available in the next update.</p>
-      <ButtonLink to="/" className="mt-7">Back to Quizzent</ButtonLink>
+      <p className="mt-4 break-words text-sm leading-relaxed text-muted">Your account is ready, {displayName}. Log in to open your organiser space.</p>
+      <ButtonLink to="/login" className="mt-7">Continue to login</ButtonLink>
     </Card>
   )
 }

@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const client = axios.create({
   timeout: 15000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', 'X-Quizzent-Request': '1' },
   responseType: 'json',
   // Reject malformed JSON rather than passing an unreadable response to a form.
   transitional: { silentJSONParsing: false },
@@ -20,9 +20,17 @@ export class ApiError extends Error {
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
+  return requestJson<T>('post', path, body)
+}
+
+export async function getJson<T>(path: string): Promise<T> {
+  return requestJson<T>('get', path)
+}
+
+async function requestJson<T>(method: 'get' | 'post', path: string, body?: unknown): Promise<T> {
   try {
     // Axios serialises the object and parses the JSON response for us.
-    const response = await client.post<T>(path, body)
+    const response = await client.request<T>({ method, url: path, data: body })
     if (response.data === null || response.data === undefined) {
       throw new Error('The server returned an unreadable response.')
     }

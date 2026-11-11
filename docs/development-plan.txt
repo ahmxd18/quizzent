@@ -53,10 +53,10 @@ FOUNDATION
 
 FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
 
-06. [ ] Organiser signup, login, logout, and current session
+06. [x] Organiser signup, login, logout, and current session
     [x] Signup API: validation, password hashing, fixed role, duplicate/rate limits.
     [x] Connect signup form to API, with pending/error/success states.
-    [ ] Login/logout, sessions, and protected organiser page.
+    [x] Login/logout, sessions, and protected organiser page.
     Add input validation, password hashing, and secure server-side sessions.
     Signup grants organiser capability only, never superadmin.
     Build the matching forms and protected organiser page.
@@ -154,9 +154,10 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–05 are complete. The account/session migration is applied locally;
-frontend theme, shared controls, routing, and clearly labelled preview screens exist.
-Foundation was merged through PR #1. Signup API and frontend form are implemented
-on feature/organiser-signup, in separate commits. Signup creates an account only.
-Next: review/merge signup, then implement login/logout and session restoration on
-a new focused branch. Step 06 remains incomplete until those flows work.
+Steps 01–06 are complete. Foundation and signup were merged through PRs #1 and #2.
+Login/logout, 24-hour server-side sessions, refresh restoration, and the protected
+organiser page are implemented on feature/organiser-login, with separate backend
+and frontend commits. All 22 database/API checks pass; browser login, refresh,
+logout, protected navigation, and mobile layouts were checked.
+Next: review/merge login, then start competition drafts (step 07) on a new branch.
+The guest join screen is still a preview. No live competitions or sockets exist yet.

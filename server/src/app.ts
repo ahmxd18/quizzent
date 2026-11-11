@@ -1,6 +1,7 @@
 import express from 'express'
 import type { Pool } from 'pg'
 import { createSignupRouter } from './features/auth/signup.routes.js'
+import { createSessionRouter } from './features/auth/session.routes.js'
 import { errorHandler } from './middleware/error-handler.js'
 
 export function createApp(database: Pool) {
@@ -13,6 +14,7 @@ export function createApp(database: Pool) {
   })
 
   app.use('/api/auth', createSignupRouter(database))
+  app.use('/api/auth', createSessionRouter(database))
   app.use((_request, response) => {
     response.status(404).json({ message: 'Route not found' })
   })
