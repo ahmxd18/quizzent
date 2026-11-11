@@ -55,7 +55,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
 
 06. [ ] Organiser signup, login, logout, and current session
     [x] Signup API: validation, password hashing, fixed role, duplicate/rate limits.
-    [ ] Connect signup form to API.
+    [x] Connect signup form to API, with pending/error/success states.
     [ ] Login/logout, sessions, and protected organiser page.
     Add input validation, password hashing, and secure server-side sessions.
     Signup grants organiser capability only, never superadmin.
@@ -156,5 +156,7 @@ multiple question types, and a general configurable scoring engine.
 CURRENT BOUNDARY
 Steps 01–05 are complete. The account/session migration is applied locally;
 frontend theme, shared controls, routing, and clearly labelled preview screens exist.
-Next: step 06, organiser authentication. Start with a small signup backend commit,
-then connect the signup screen before moving to login/logout and session restoration.
+Foundation was merged through PR #1. Signup API and frontend form are implemented
+on feature/organiser-signup, in separate commits. Signup creates an account only.
+Next: review/merge signup, then implement login/logout and session restoration on
+a new focused branch. Step 06 remains incomplete until those flows work.

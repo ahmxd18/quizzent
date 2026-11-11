@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Join/signup/login screens are still previews while signup UI is connected. The Express API now supports organiser signup with validation and password hashing. PostgreSQL connection setup and account/session tables are ready; login, competitions, and sockets are not implemented yet.
+The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Organiser signup works from the form through PostgreSQL, with validation, password hashing, and clear pending/error/success states. Signup does not sign the user in yet. Login and join screens remain previews; sessions, competitions, and sockets are not implemented yet.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
@@ -77,6 +77,7 @@ docs/
   development-plan.txt Ordered milestones and checks
   postgresql-setup.md   Local setup and plain-language database explanations
   database-schema.md    Account/session tables and migration commands
+  organiser-signup.md   Signup API, hashing, validation, and frontend flow
   frontend-design.md    Palette options, contrast checks, and component boundaries
 ```
 
@@ -108,5 +109,7 @@ Routes: `/` (home), `/join`, `/login`, `/signup`, and a not-found fallback. Host
 ## Development workflow
 
 The initial commit on `main` contains setup only. Continue work on a separate feature branch and merge reviewed changes through pull requests. Keep changes small and focused on one feature at a time.
+
+The foundation milestone was merged through [PR #1](https://github.com/ahmxd18/quizzent/pull/1). Signup continues on `feature/organiser-signup`, based on updated `main`. Finish and merge each feature before starting its successor from main.
 
 Explain unfamiliar TypeScript, Socket.IO, and PostgreSQL concepts briefly as they appear. Use short, natural code comments where they clarify a decision. Never commit real credentials or `.env` files.

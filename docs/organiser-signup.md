@@ -44,6 +44,12 @@ Scrypt uses `N=32768`, `r=8`, `p=3`, one of OWASP's minimum configurations. It i
 
 ## Run and verify
 
+The `/signup` page is connected. Native input constraints handle basic required/length checks; the server is authoritative. The screen shows pending, server field errors, network failures, and success. Duplicate-email errors retain entered values. The successful form unmounts, releasing its password input; its mutation has no persistent cache storage. No credentials are stored in localStorage.
+
+Frontend separation: `api/signup.ts` describes the request, `hooks/useSignup.ts` configures TanStack Query, `SignupForm` handles form interaction, `SignupPanel` composes the account UI, and `SignupSuccess` confirms account creation without claiming a login session. The generic HTTP/error helper lives in `src/lib/http.ts`.
+
+Mutations do not automatically retry, because an interrupted response might follow a committed account creation. A subsequent duplicate response should be treated as an existing account, not proof that the previous request failed to save it.
+
 Start Postgres.app, apply migrations, and ensure `server/.env` contains `DATABASE_URL` before starting the API:
 
 ```sh
@@ -56,5 +62,7 @@ npm run test:server
 ```
 
 The tests use isolated PostgreSQL schemas and real HTTP requests. They cover hash verification and unique salts, normalisation, privilege injection, invalid requests, simultaneous duplicate emails, request limits, and database failure responses. No application test accounts remain in public tables.
+
+Browser checks covered real account creation, pending controls, success focus, and case-insensitive duplicate-email feedback. The single browser-test account was removed afterward.
 
 References: [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [Node crypto](https://nodejs.org/api/crypto.html#cryptoscryptpassword-salt-keylen-options-callback), [Zod](https://zod.dev/api), [express-rate-limit](https://express-rate-limit.mintlify.app/quickstart/usage).
