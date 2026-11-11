@@ -5,6 +5,7 @@ import { requireSameOriginRequest, requireSession } from '../auth/session.http.j
 import type { SessionUser } from '../auth/session.service.js'
 import { competitionSchema } from './competition.schema.js'
 import { createCompetition, getCompetition, listCompetitions, updateCompetition } from './competition.service.js'
+import { createQuestionRouter } from '../questions/question.routes.js'
 
 export function createCompetitionRouter(database: Pool) {
   const router = express.Router()
@@ -21,6 +22,7 @@ export function createCompetitionRouter(database: Pool) {
     if (!z.uuid().safeParse(id).success) { response.status(400).json({ message: 'Invalid competition ID.' }); return }
     next()
   })
+  router.use('/:id/questions', createQuestionRouter(database))
 
   router.get('/', async (_request, response) => {
     const user: SessionUser = response.locals.user
