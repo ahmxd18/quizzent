@@ -20,7 +20,7 @@ test('account and session migration', async (context) => {
     migrationsSchema: schema,
     schema,
     direction,
-    count: direction === 'down' ? 2 : undefined,
+    count: direction === 'down' ? 4 : undefined,
     verbose: false,
     log: () => {},
   })
@@ -41,7 +41,7 @@ test('account and session migration', async (context) => {
     schemaCreated = true
 
     await context.test('applies once to a fresh schema', async () => {
-      assert.equal((await migrate('up')).length, 2)
+      assert.equal((await migrate('up')).length, 4)
       assert.equal((await migrate('up')).length, 0)
     })
 
@@ -98,11 +98,11 @@ test('account and session migration', async (context) => {
     await client.query('ROLLBACK')
 
     await context.test('can roll back and reapply in the disposable schema', async () => {
-      assert.equal((await migrate('down')).length, 2)
+      assert.equal((await migrate('down')).length, 4)
       const { rows: [tables] } = await client.query("SELECT to_regclass($1) AS users, to_regclass($2) AS sessions", [`${schema}.users`, `${schema}.user_sessions`])
       assert.equal(tables.users, null)
       assert.equal(tables.sessions, null)
-      assert.equal((await migrate('up')).length, 2)
+      assert.equal((await migrate('up')).length, 4)
     })
   } finally {
     try {

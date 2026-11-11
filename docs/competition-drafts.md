@@ -11,7 +11,8 @@ Drafts do not publish, generate room codes, or admit competitors.
 - Description: optional, trimmed, at most 500 characters; defaults to empty text.
 - Time per question: whole seconds from 5 to 120, default 10. Applies to every question.
 
-Question editing and publication are the next feature. Lobby and admission settings
+Question editing and publication are available through Manage questions; see
+[the question guide](questions-and-publication.md). Lobby and admission settings
 will be introduced with room hosting. There is no autosave, deletion, duplication,
 search, or filtering in this slice.
 
@@ -56,7 +57,7 @@ Migration `0002_competition-drafts.sql` creates `competitions`:
   own a draft. Deleting the account cascades to its drafts.
 - `title`, `description`, `question_time_seconds`: editable values with database
   constraints, giving a second check behind API validation.
-- `status`: currently constrained to `draft`; publication will extend this later.
+- `status`: draft or published after migration 0004; published_at records publication.
 - `created_at`, `updated_at`: timestamps with time zone. Creation defaults come
   from PostgreSQL; the update service explicitly advances updated_at on each save.
 
@@ -92,7 +93,7 @@ added when needed; this feature does not claim to support collaborative editing.
 
 ## Verification
 
-Build and lint pass. All 30 database/API checks pass in disposable schemas, covering
+Build and lint pass. All 39 database/API checks now pass in disposable schemas, covering
 the migration, defaults/constraints, ownership on list/read/update, injected fields,
 validation, malformed/oversized requests, ordering, and suspended/expired sessions,
 alongside existing signup/session checks.
