@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   '/login': 'Organiser login — Quizzent',
   '/signup': 'Become an organiser — Quizzent',
   '/organiser': 'Organiser space — Quizzent',
+  '/organiser/competitions/new': 'Create competition — Quizzent',
 }
 
 export function AppLayout() {
@@ -17,7 +18,7 @@ export function AppLayout() {
   const previousPath = useRef(pathname)
 
   useEffect(() => {
-    document.title = titles[pathname] ?? 'Page not found — Quizzent'
+    document.title = titles[pathname] ?? (/^\/organiser\/competitions\/[^/]+\/edit$/.test(pathname) ? 'Edit competition — Quizzent' : 'Page not found — Quizzent')
     if (previousPath.current !== pathname) {
       // Announce the new page to keyboard/screen-reader users after navigation.
       mainRef.current?.focus({ preventScroll: true })
