@@ -8,6 +8,7 @@ import type { Question } from '../api/questions'
 import { useQuestionActions, useQuestions } from '../hooks/useQuestions'
 import { QuestionCard } from './QuestionCard'
 import { QuestionForm } from './QuestionForm'
+import { PublishCompetitionPanel } from '../../competitions/components/PublishCompetitionPanel'
 
 export function QuestionWorkspace({ competition }: { competition: Competition }) {
   const query = useQuestions(competition.id, true)
@@ -41,6 +42,7 @@ export function QuestionWorkspace({ competition }: { competition: Competition })
       {editing && !locked && <QuestionForm key={editing === 'new' ? 'new' : editing.id} competitionId={competition.id} question={editing === 'new' ? undefined : editing} onClose={closeEditor} />}
       {questions?.length === 0 && !editing && <div className="rounded-card border border-dashed border-control p-10 text-center"><h3 className="font-display text-2xl">Start with your first question.</h3><p className="mt-3 text-sm text-muted">Add a question and mark its correct answer. Save each one when it’s ready.</p></div>}
       {questions?.map((question, index) => <QuestionCard key={question.id} question={question} number={index + 1} locked={locked} busy={busy} onEdit={() => { setNotice(''); setEditing(question) }} onRemove={() => setRemoving(question)} />)}
+      <PublishCompetitionPanel competition={competition} count={questions?.length ?? 0} disabled={busy || query.isPending || query.isError} />
       <ConfirmDialog open={!!removing} title="Remove this question?" description="This removes the saved question and its four options from this draft." confirmLabel="Remove question" cancelLabel="Keep question" pending={remove.isPending} onCancel={() => setRemoving(null)} onConfirm={() => { if (removing && !remove.isPending) remove.mutate(removing.id, { onSuccess: () => { setRemoving(null); setNotice('Question removed.') }, onError: () => setRemoving(null) }) }} />
     </section>
   )

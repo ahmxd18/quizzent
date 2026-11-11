@@ -8,3 +8,4 @@ export const listCompetitions = () => getJson<{ competitions: Competition[] }>('
 export const getCompetition = (id: string) => getJson<CompetitionResponse>(`/api/competitions/${encodeURIComponent(id)}`)
 export const createCompetition = (input: CompetitionInput) => postJson<CompetitionResponse>('/api/competitions', input)
 export const updateCompetition = (id: string, input: CompetitionInput) => putJson<CompetitionResponse>(`/api/competitions/${encodeURIComponent(id)}`, input)
+export const publishCompetition = (id: string) => postJson<CompetitionResponse>(`/api/competitions/${encodeURIComponent(id)}/publish`, {})
