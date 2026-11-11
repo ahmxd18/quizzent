@@ -1,8 +1,9 @@
 import type { Pool } from 'pg'
 import type { CompetitionInput } from './competition.schema.js'
+import { CompetitionWriteError } from './draft-transaction.js'
 
-type Competition = CompetitionInput & { id: string; status: 'draft'; createdAt: Date; updatedAt: Date }
-const columns = 'id, title, description, question_time_seconds AS "questionTimeSeconds", status, created_at AS "createdAt", updated_at AS "updatedAt"'
+type Competition = CompetitionInput & { id: string; status: 'draft' | 'published'; createdAt: Date; updatedAt: Date; publishedAt: Date | null }
+const columns = 'id, title, description, question_time_seconds AS "questionTimeSeconds", status, created_at AS "createdAt", updated_at AS "updatedAt", published_at AS "publishedAt"'
 
 export async function listCompetitions(database: Pool, organiserId: string) {
   const { rows } = await database.query<Competition>(
@@ -29,5 +30,8 @@ export async function updateCompetition(database: Pool, organiserId: string, id:
     `UPDATE competitions SET title = $1, description = $2, question_time_seconds = $3, updated_at = clock_timestamp()
      WHERE id = $4 AND organiser_id = $5 AND status = 'draft' RETURNING ${columns}`,
     [input.title, input.description, input.questionTimeSeconds, id, organiserId])
+  if (!rows[0] && await getCompetition(database, organiserId, id)) {
+    throw new CompetitionWriteError(409, 'This competition is published and can no longer be changed.')
+  }
   return rows[0] ?? null
 }

@@ -93,6 +93,50 @@ test('question editing API', async context => {
       assert.equal((await pool!.query('SELECT id FROM question_options WHERE question_id = $1', [question.id])).rowCount, 0)
       assert.equal((await send(`/${question.id}`, 'DELETE')).status, 404)
     })
+
+    await context.test('publishing validates ownership and content, then freezes all write paths', async () => {
+      const publishUrl = base.replace(/\/questions$/, '/publish')
+      const publish = (session = cookie, body: unknown = {}) => fetch(publishUrl, { method: 'POST', headers: { Cookie: session, 'Content-Type': 'application/json', 'X-Quizzent-Request': '1' }, body: JSON.stringify(body) })
+      assert.equal((await publish(otherCookie)).status, 404)
+      assert.equal((await publish(cookie, { title: 'Injected' })).status, 400)
+      const empty = await createCompetition(pool!, owner.id, { title: 'Empty', description: '', questionTimeSeconds: 10 })
+      const emptyResponse = await fetch(publishUrl.replace(draft.id, empty.id), { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-Quizzent-Request': '1' }, body: '{}' })
+      assert.equal(emptyResponse.status, 409)
+      const { questions } = await (await send()).json()
+      // Corrupt an option using SQL to verify publication rechecks stored content too.
+      await pool!.query('UPDATE question_options SET text = $1 WHERE id = $2', [questions[0].options[0].text, questions[0].options[1].id])
+      assert.equal((await publish()).status, 409)
+      await pool!.query('UPDATE question_options SET text = $1 WHERE id = $2', [questions[0].options[1].text, questions[0].options[1].id])
+      const response = await publish()
+      assert.equal(response.status, 200)
+      const { competition } = await response.json()
+      assert.equal(competition.status, 'published')
+      assert.ok(competition.publishedAt)
+      assert.equal((await send('', 'POST', input)).status, 409)
+      assert.equal((await send(`/${questions[0].id}`, 'PUT', input)).status, 409)
+      assert.equal((await send(`/${questions[0].id}`, 'DELETE')).status, 409)
+      const details = await fetch(base.replace(/\/questions$/, ''), { method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-Quizzent-Request': '1' }, body: JSON.stringify({ title: 'Changed', questionTimeSeconds: 20 }) })
+      assert.equal(details.status, 409)
+      assert.equal((await publish()).status, 409)
+      assert.equal((await send()).status, 200)
+    })
+
+    await context.test('a concurrent edit cannot change content after publication commits', async () => {
+      const race = await createCompetition(pool!, owner.id, { title: 'Race', description: '', questionTimeSeconds: 10 })
+      const raceBase = base.replace(draft.id, race.id)
+      const headers = { Cookie: cookie, 'Content-Type': 'application/json', 'X-Quizzent-Request': '1' }
+      const first = await fetch(raceBase, { method: 'POST', headers, body: JSON.stringify(input) })
+      const { question: saved } = await first.json()
+      const [edit, publish] = await Promise.all([
+        fetch(`${raceBase}/${saved.id}`, { method: 'PUT', headers, body: JSON.stringify({ ...input, prompt: 'Racing edit?' }) }),
+        fetch(raceBase.replace(/\/questions$/, '/publish'), { method: 'POST', headers, body: '{}' }),
+      ])
+      assert.equal(publish.status, 200)
+      assert.ok([200, 409].includes(edit.status))
+      const { questions } = await (await fetch(raceBase, { headers })).json()
+      assert.equal(questions[0].prompt, edit.status === 200 ? 'Racing edit?' : input.prompt.trim())
+      assert.equal((await fetch(`${raceBase}/${saved.id}`, { method: 'PUT', headers, body: JSON.stringify(input) })).status, 409)
+    })
   } finally {
     if (server) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()))
     await pool?.end()
