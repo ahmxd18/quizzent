@@ -1,3 +1,13 @@
+import axios from 'axios'
+
+const client = axios.create({
+  timeout: 15000,
+  headers: { 'Content-Type': 'application/json' },
+  responseType: 'json',
+  // Reject malformed JSON rather than passing an unreadable response to a form.
+  transitional: { silentJSONParsing: false },
+})
+
 export class ApiError extends Error {
   status: number
   fieldErrors: Record<string, string>
@@ -10,23 +20,26 @@ export class ApiError extends Error {
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  const payload: unknown = await response.json().catch(() => null)
+  try {
+    // Axios serialises the object and parses the JSON response for us.
+    const response = await client.post<T>(path, body)
+    if (response.data === null || response.data === undefined) {
+      throw new Error('The server returned an unreadable response.')
+    }
+    return response.data
+  } catch (error) {
+    // Network/timeout errors have no HTTP response; the form shows its connection message.
+    if (!axios.isAxiosError(error) || !error.response) throw error
 
-  if (!response.ok) {
-    const error = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
+    const payload: unknown = error.response.data
+    const details = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
     const fieldErrors: Record<string, string> = {}
-    if (error.fieldErrors && typeof error.fieldErrors === 'object') {
-      for (const [key, value] of Object.entries(error.fieldErrors)) {
+    if (details.fieldErrors && typeof details.fieldErrors === 'object') {
+      for (const [key, value] of Object.entries(details.fieldErrors)) {
         if (typeof value === 'string') fieldErrors[key] = value
       }
     }
-    throw new ApiError(response.status, typeof error.message === 'string' ? error.message : 'Something went wrong. Please try again.', fieldErrors)
+    // Keep UI error handling independent of Axios's response structure.
+    throw new ApiError(error.response.status, typeof details.message === 'string' ? details.message : 'Something went wrong. Please try again.', fieldErrors)
   }
-  if (payload === null) throw new Error('The server returned an unreadable response.')
-  return payload as T
 }

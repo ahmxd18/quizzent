@@ -46,7 +46,7 @@ Scrypt uses `N=32768`, `r=8`, `p=3`, one of OWASP's minimum configurations. It i
 
 The `/signup` page is connected. Native input constraints handle basic required/length checks; the server is authoritative. The screen shows pending, server field errors, network failures, and success. Duplicate-email errors retain entered values. The successful form unmounts, releasing its password input; its mutation has no persistent cache storage. No credentials are stored in localStorage.
 
-Frontend separation: `api/signup.ts` describes the request, `hooks/useSignup.ts` configures TanStack Query, `SignupForm` handles form interaction, `SignupPanel` composes the account UI, and `SignupSuccess` confirms account creation without claiming a login session. The generic HTTP/error helper lives in `src/lib/http.ts`.
+Frontend separation: `api/signup.ts` describes the request, `hooks/useSignup.ts` configures TanStack Query, `SignupForm` handles form interaction, `SignupPanel` composes the account UI, and `SignupSuccess` confirms account creation without claiming a login session. The generic HTTP/error helper lives in `src/lib/http.ts`. It uses one Axios instance with a 15-second timeout and maps server errors into `ApiError`, so form components do not depend on Axios-specific response shapes. Axios performs HTTP transport; TanStack Query manages the mutation's pending/error/success state.
 
 Mutations do not automatically retry, because an interrupted response might follow a committed account creation. A subsequent duplicate response should be treated as an existing account, not proof that the previous request failed to save it.
 
