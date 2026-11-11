@@ -20,7 +20,7 @@ test('account and session migration', async (context) => {
     migrationsSchema: schema,
     schema,
     direction,
-    count: direction === 'down' ? 1 : undefined,
+    count: direction === 'down' ? 2 : undefined,
     verbose: false,
     log: () => {},
   })
@@ -41,7 +41,7 @@ test('account and session migration', async (context) => {
     schemaCreated = true
 
     await context.test('applies once to a fresh schema', async () => {
-      assert.equal((await migrate('up')).length, 1)
+      assert.equal((await migrate('up')).length, 2)
       assert.equal((await migrate('up')).length, 0)
     })
 
@@ -79,14 +79,30 @@ test('account and session migration', async (context) => {
       assert.equal(result.count, 0)
     })
 
+    await context.test('enforces draft ownership, defaults, and field constraints', async () => {
+      const { rows: [owner] } = await client.query(insertUser, ['Draft Owner', 'draft@example.test', 'test-fixture-hash'])
+      const insert = 'INSERT INTO competitions (organiser_id, title) VALUES ($1, $2) RETURNING *'
+      const { rows: [draft] } = await client.query(insert, [owner.id, 'Friday Brainstorm'])
+      assert.equal(draft.question_time_seconds, 10)
+      assert.equal(draft.description, '')
+      assert.equal(draft.status, 'draft')
+      await rejectsWrite(insert, [randomUUID(), 'Missing owner'], '23503')
+      for (const title of ['', ' padded ', 'x'.repeat(101)]) await rejectsWrite(insert, [owner.id, title], '23514')
+      await rejectsWrite('UPDATE competitions SET description = $1 WHERE id = $2', ['x'.repeat(501), draft.id], '23514')
+      for (const seconds of [4, 121]) await rejectsWrite('UPDATE competitions SET question_time_seconds = $1 WHERE id = $2', [seconds, draft.id], '23514')
+      await rejectsWrite("UPDATE competitions SET status = 'published' WHERE id = $1", [draft.id], '23514')
+      await client.query('DELETE FROM users WHERE id = $1', [owner.id])
+      assert.equal((await client.query('SELECT id FROM competitions WHERE id = $1', [draft.id])).rowCount, 0)
+    })
+
     await client.query('ROLLBACK')
 
     await context.test('can roll back and reapply in the disposable schema', async () => {
-      assert.equal((await migrate('down')).length, 1)
+      assert.equal((await migrate('down')).length, 2)
       const { rows: [tables] } = await client.query("SELECT to_regclass($1) AS users, to_regclass($2) AS sessions", [`${schema}.users`, `${schema}.user_sessions`])
       assert.equal(tables.users, null)
       assert.equal(tables.sessions, null)
-      assert.equal((await migrate('up')).length, 1)
+      assert.equal((await migrate('up')).length, 2)
     })
   } finally {
     try {
