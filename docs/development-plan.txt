@@ -1,0 +1,157 @@
+QUIZZENT — ORDERED DEVELOPMENT PLAN
+
+Goal: a clear, reliable portfolio project built one small step at a time.
+Status: [x] completed, [ ] pending. Update this file as work progresses.
+
+WORKING RULES
+- Keep main stable. Develop on feature branches and merge through pull requests.
+- Make one focused commit per reviewable change. Do not mix unrelated features.
+- Check each change before committing; push small completed commits.
+- Build a feature's backend and frontend together once the foundations exist.
+- Explain unfamiliar TypeScript, PostgreSQL, and Socket.IO briefly as they appear.
+- Use short, useful comments and named colour tokens. Reuse components when useful.
+- Add dependencies when needed, not for hypothetical future features.
+- Run targeted checks with each feature; do not postpone correctness to the end.
+
+FOUNDATION
+
+01. [x] Frontend starter
+    React + Vite + TypeScript, Tailwind theme tokens, TanStack Query provider.
+    Check: frontend build, lint, and browser rendering.
+    Already committed on main before the feature branch was created.
+
+02. [x] Save the ordered plan
+    Keep confirmed rules in project-decisions.md and implementation order here.
+    Commit: docs: add ordered development plan
+
+03. [x] Minimal backend and local frontend/backend connection
+    Add Express + TypeScript under server/, retaining the existing frontend.
+    Add GET /api/health, a server build, and local development commands.
+    Forward /api requests from Vite to Express during development.
+    No database, authentication, or Socket.IO yet.
+    Check: lint, both builds, direct health response, and Vite-proxied response.
+    Commit: chore: add Express TypeScript server foundation
+
+04. [x] PostgreSQL connection and first migration
+    [x] Local PostgreSQL installation, dedicated login/database, and pg connection check.
+    [x] First migration for organiser accounts and server-side sessions.
+    Choose a free local PostgreSQL installation method before installing it.
+    Add the pg driver and a server-only DATABASE_URL environment variable.
+    Introduce a migration: a numbered SQL file that changes database structure.
+    Start with organiser accounts and server-side sessions; add other tables later.
+    Explain tables, primary keys, unique constraints, and transactions with examples.
+    Check: connect locally, apply migrations to an empty database, reject duplicates.
+    Split connection setup and initial tables into separate commits.
+
+05. [x] Frontend navigation and shared UI basics
+    Add routing, a simple page layout, and reusable input/button components.
+    Add loading, empty, and error states as actual screens need them.
+    Keep the placeholder until real features replace it; avoid a large UI framework.
+    Check: navigation, keyboard use, mobile layout, and existing builds.
+    Added plum/citron tokens, UI primitives, responsive home and preview routes.
+    Generic components: src/components/. Feature UI: src/features/<feature>/components/.
+
+FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
+
+06. [ ] Organiser signup, login, logout, and current session
+    Add input validation, password hashing, and secure server-side sessions.
+    Signup grants organiser capability only, never superadmin.
+    Build the matching forms and protected organiser page.
+    Check: invalid input, duplicate email, wrong password, logout, unauthorised access.
+    Commit backend authentication and frontend forms separately.
+
+07. [ ] Create, list, and edit competition drafts
+    Add organiser-owned competitions and basic settings, including default 10 seconds.
+    Add a simple organiser dashboard and draft form.
+    Check: ownership, invalid settings, and attempts to edit someone else's draft.
+
+08. [ ] Question editing and publication
+    Add single-correct MCQs with stable question/option IDs and exactly one key.
+    Add the editor and validation; freeze content and rules when published.
+    Check: invalid questions and changes to frozen content.
+    Keep question editing and publication as separate commits.
+
+09. [ ] Open one room and admit guests
+    Generate a unique room code and invitation link.
+    Enforce one active hosted room per organiser and a maximum of 50 competitors.
+    Generate editable English-word guest names unique within the room.
+    Use a private guest session to restore identity; a name is not a credential.
+    Build room-code entry and the guest join form.
+    Check: name/capacity races, duplicate joins, invalid codes, and refresh identity.
+    Split room creation, guest identity, and join UI into focused commits.
+
+10. [ ] Live lobby and readiness
+    Add Socket.IO only now; authenticate guest/organiser subscriptions.
+    Add ready/unready, distinct ready counts, and short presence leases.
+    A presence lease means a competitor counts only while recently connected.
+    Check: two tabs count once, disconnect expiry, reconnect, and unauthorised rooms.
+
+11. [ ] Automatic start and five-second warning
+    Persist lobby countdown deadlines; start only after countdown and minimum-ready rules.
+    When eligible, run a five-second warning before atomic roster admission.
+    Proposed: if ready count falls below minimum, wait and restart the five seconds later.
+    Confirm this behaviour when implementing it; it is currently a proposed default.
+    Close late admission and show the committed state to all clients.
+    Check: threshold races, disconnect during warning, repeated start triggers.
+
+12. [ ] Assigned questions and immutable answer submission
+    Persist an independent question/option permutation for every admitted guest.
+    Return only the current question; keep keys and other submissions private.
+    Save one answer and advance in one transaction (an all-or-nothing database change).
+    Use request IDs so retrying an accepted answer cannot score twice.
+    Build the question screen and submission/loading states.
+    Check: conflicting answers, sequence bypass, retries, and refresh after submission.
+    Split assignment, submission engine, and question UI into separate commits.
+
+13. [ ] Authoritative timing, timeout progression, and reconnection
+    Use the same organiser-configured limit for each question, default 10 seconds.
+    Save server issue times and deadlines; browser timers are display only.
+    Proposed: individual disconnections do not pause timers; timeouts receive full time.
+    Confirm these defaults when implementing them.
+    Restore the same attempt and reconcile missed deadlines without resetting time.
+    Check: exact deadline, answer versus timeout, offline expiry, and lost updates.
+
+14. [ ] Final results and organiser progress
+    Rank by correct answers descending, then total answer time ascending.
+    Proposed: share ranks for exact ties and release correctness after completion.
+    Recalculate final results from saved resolutions before publishing them.
+    Add a simple organiser progress view and final competitor leaderboard.
+    Check: ties, unanswered questions, simultaneous finishes, and private data visibility.
+
+15. [ ] Cancellation and server outage handling
+    Add explicit cancellation with a reason and a clear cancelled screen.
+    On server restart, cancel affected active competitions rather than resuming them.
+    During loss of contact, show a connection warning; confirm cancellation on recovery.
+    Check: restart mid-competition, cancellation versus answer, no invalid final results.
+
+16. [ ] Minimal superadmin controls
+    Provision superadmin separately; do not expose privileged public signup.
+    Add user/organiser inspection, suspension, role assignment, and room cancellation.
+    Record privileged actions; do not add arbitrary score editing.
+    Check: role escalation, session revocation, and access across organiser accounts.
+
+FINISH AND PRESENT
+
+17. [ ] MVP hardening
+    Review validation, authorisation, rate limits, session/CSRF controls, and error messages.
+    Run an end-to-end organiser + guest journey and concurrency regression checks.
+    Load-test the target 30–50 competitors; document measured results honestly.
+    Review accessibility, colour contrast, mobile layouts, and secrets in tracked files.
+
+18. [ ] Free/minimal-cost deployment and portfolio documentation
+    Compare current free hosting limits before choosing providers or creating accounts.
+    Verify persistent connections, idle suspension, database limits, and outage behaviour.
+    Add deployment configuration, production session settings, logs, and backup guidance.
+    Keep the frontend and API deployment relationship explicit; Vite's proxy is dev-only.
+    Finish README screenshots, architecture diagram, setup guide, and interview notes.
+    Separate deployment configuration and documentation into small commits.
+
+NOT IN THIS MVP
+Redis, microservices, multi-region hosting, proctoring, question banks, teams,
+multiple question types, and a general configurable scoring engine.
+
+CURRENT BOUNDARY
+Steps 01–05 are complete. The account/session migration is applied locally;
+frontend theme, shared controls, routing, and clearly labelled preview screens exist.
+Next: step 06, organiser authentication. Start with a small signup backend commit,
+then connect the signup screen before moving to login/logout and session restoration.

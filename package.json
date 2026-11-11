@@ -5,24 +5,44 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev:server": "node --env-file-if-exists=server/.env --import tsx --watch server/src/index.ts",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "tsc -b && vite build",
+    "build:server": "tsc -p server/tsconfig.json",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:server": "node --env-file-if-exists=server/.env server/dist/index.js",
+    "db:check": "node --env-file-if-exists=server/.env --import tsx server/src/check-database.ts",
+    "db:migrate": "node --env-file-if-exists=server/.env node_modules/node-pg-migrate/bin/node-pg-migrate.js up --migrations-dir server/migrations --no-verbose",
+    "test:db": "tsc -p server/tsconfig.test.json && node --env-file-if-exists=server/.env --import tsx --test server/tests/database-schema.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
     "@tanstack/react-query": "^5.107.1",
+    "express": "^5.3.0",
+    "lucide-react": "^1.71.0",
+    "pg": "^8.23.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-router": "^8.5.1",
     "tailwindcss": "^4.3.5"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "node-pg-migrate": "^9.0.0",
     "oxlint": "^1.90.0",
+    "tsx": "^4.23.15",
     "typescript": "~7.0.2",
     "vite": "^8.3.6"
+  },
+  "overrides": {
+    "node-pg-migrate": {
+      "glob": "^14.0.2"
+    }
   }
 }

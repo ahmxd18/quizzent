@@ -1,24 +1,3 @@
 @import 'tailwindcss';
-
-/* Define colours here so components can use names such as text-brand. */
-@theme {
-  --color-brand: #4f46e5;
-  --color-canvas: #f8fafc;
-  --color-surface: #ffffff;
-  --color-foreground: #0f172a;
-  --color-muted: #475569;
-  --color-outline: #cbd5e1;
-  --color-success: #15803d;
-  --color-danger: #b91c1c;
-}
-
-@layer base {
-  body {
-    margin: 0;
-    min-width: 320px;
-    background-color: var(--color-canvas);
-    color: var(--color-foreground);
-    font-family: ui-sans-serif, system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-}
+@import './styles/tokens.css';
+@import './styles/base.css';
