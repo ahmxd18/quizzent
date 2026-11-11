@@ -55,3 +55,23 @@ These choices follow the [OWASP session guidance](https://cheatsheetseries.owasp
 password checks, safe responses, hashed token storage, restoration, rotation,
 logout/replay, expiry, suspension, cross-site protection, bounded input, rate limits,
 and production cookie settings. Existing signup/schema tests also run.
+
+## Frontend flow
+
+`LoginForm` → `useLogin` → feature API → shared Axios helper → Express.
+`useSession` uses TanStack Query to share the current user between the header and
+protected page. A 401 means signed out; network/server failures show a retry state.
+Refreshing asks the server again using the browser's HttpOnly cookie. Nothing is
+persisted in localStorage. Logout removes cached private data after the server
+confirms revocation. Other tabs recheck on focus; they do not receive a live logout
+notification yet.
+
+`RequireSession` redirects signed-out visitors to login. This is a navigation
+convenience, not backend authorisation: future competition endpoints must validate
+the cookie and ownership themselves. `/organiser` currently shows account details
+and logout, with competition creation clearly marked as the next feature.
+
+Browser checks confirmed pending controls, focused wrong-password feedback,
+successful login, restoration after refresh, logout, and redirected access after
+logout. Login and organiser screens fit a 375px viewport without horizontal
+overflow. The disposable browser-test account and its sessions were removed.

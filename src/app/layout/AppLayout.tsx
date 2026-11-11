@@ -8,6 +8,7 @@ const titles: Record<string, string> = {
   '/join': 'Join a room — Quizzent',
   '/login': 'Organiser login — Quizzent',
   '/signup': 'Become an organiser — Quizzent',
+  '/organiser': 'Organiser space — Quizzent',
 }
 
 export function AppLayout() {
