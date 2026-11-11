@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
-import { AccountPage } from '../features/auth/pages/AccountPage'
+import { LoginPage } from '../features/auth/pages/LoginPage'
+import { SignupPage } from '../features/auth/pages/SignupPage'
 import { HomePage } from '../features/home/pages/HomePage'
 import { JoinPage } from '../features/join/pages/JoinPage'
 import { AppLayout } from './layout/AppLayout'
@@ -11,8 +12,8 @@ export function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="join" element={<JoinPage />} />
-        <Route path="login" element={<AccountPage mode="login" />} />
-        <Route path="signup" element={<AccountPage mode="signup" />} />
+        <Route path="login" element={<LoginPage />} />
+        <Route path="signup" element={<SignupPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
