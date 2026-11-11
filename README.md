@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Join/signup/login screens are clearly marked previews with submission disabled. A small Express/TypeScript API provides a health endpoint. PostgreSQL connection setup and the initial account/session tables are ready; authentication endpoints, competitions, and sockets are not implemented yet.
+The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Join/signup/login screens are still previews while signup UI is connected. The Express API now supports organiser signup with validation and password hashing. PostgreSQL connection setup and account/session tables are ready; login, competitions, and sockets are not implemented yet.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
@@ -33,7 +33,7 @@ curl http://127.0.0.1:3001/api/health
 
 Expected response: `{"status":"ok","service":"quizzent-api"}`. This checks the API process only; it does not check PostgreSQL.
 
-Optionally copy `server/.env.example` to `server/.env`. Node loads this file for the backend; it is ignored by Git. If you change `PORT`, also update Vite's proxy target. Never put backend secrets in frontend `VITE_` variables.
+The API now requires `DATABASE_URL`: copy `server/.env.example` to `server/.env` and configure your local credentials if not already set up. Node loads this ignored file for the backend. Start Postgres.app and apply migrations before signup requests. If you change `PORT`, also update Vite's proxy target. Never put backend secrets in frontend `VITE_` variables.
 
 ```sh
 npm run lint       # Check for code issues
@@ -43,6 +43,7 @@ npm run start:server # Run the compiled backend after building
 npm run db:check    # Verify the local PostgreSQL connection
 npm run db:migrate  # Apply pending database migrations
 npm run test:db     # Check migration/constraints in an isolated temporary schema
+npm run test:server # Run schema and signup API integration tests
 ```
 
 Vite's `/api` proxy is local tooling, not a production API gateway. `preview` is also a local preview, not a deployment server. Production hosting and API routing will be configured in the deployment step; the backend currently binds to this computer only.

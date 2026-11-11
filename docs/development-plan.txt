@@ -54,6 +54,9 @@ FOUNDATION
 FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
 
 06. [ ] Organiser signup, login, logout, and current session
+    [x] Signup API: validation, password hashing, fixed role, duplicate/rate limits.
+    [ ] Connect signup form to API.
+    [ ] Login/logout, sessions, and protected organiser page.
     Add input validation, password hashing, and secure server-side sessions.
     Signup grants organiser capability only, never superadmin.
     Build the matching forms and protected organiser page.
