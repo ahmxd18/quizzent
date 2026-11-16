@@ -1,0 +1,9 @@
+import { z } from 'zod'
+
+export const createRoomSchema = z.strictObject({ competitionId: z.uuid(), admissionMode: z.enum(['open', 'invitation']) })
+export const invitationSchema = z.strictObject({ reference: z.string().trim().min(1, 'Enter an organiser reference.').max(100, 'Use 100 characters or fewer.') })
+export const joinRoomSchema = z.strictObject({
+  nickname: z.string().transform(value => value.normalize('NFKC').trim().replace(/\s+/gu, ' ')).pipe(z.string().min(1, 'Choose a nickname.').max(32, 'Use 32 characters or fewer.')),
+  invitationToken: z.string().regex(/^[0-9a-f]{64}$/, 'This invitation link is invalid.').optional(),
+})
+export const roomCodeSchema = z.string().transform(value => value.replace(/[\s-]/g, '').toUpperCase()).pipe(z.string().regex(/^[A-Z2-9]{8}$/, 'Enter an eight-character room code.'))
