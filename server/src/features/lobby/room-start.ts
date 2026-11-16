@@ -82,6 +82,10 @@ export function createRoomStart(
         await client.query(
           'UPDATE rooms SET started_at = $2, warning_ends_at = NULL WHERE id = $1', [roomId, new Date(now)],
         )
+        const { rows: [attempts] } = await client.query<{ assigned: number }>(
+          'SELECT assign_quiz_attempts($1) AS assigned', [roomId],
+        )
+        if (attempts.assigned !== ids.length) throw new Error('Could not assign questions to the starting roster.')
         return { changed: true, terminal: true }
       })
 
