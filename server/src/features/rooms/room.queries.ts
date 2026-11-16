@@ -1,0 +1,2 @@
+export type Room = { id: string; code: string; competitionId: string; title: string; admissionMode: 'open' | 'invitation'; status: 'open' | 'closed'; createdAt: Date; closedAt: Date | null; participantCount: number }
+export const roomColumns = `r.id, r.code, r.competition_id AS "competitionId", c.title, r.admission_mode AS "admissionMode", r.status, r.created_at AS "createdAt", r.closed_at AS "closedAt", (SELECT count(*)::integer FROM room_participants p WHERE p.room_id = r.id) AS "participantCount"`

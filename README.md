@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-The frontend has a plum/citron theme, reusable UI primitives, a responsive homepage, and client-side routes. Organisers can sign up, log in, and manage private competition drafts. They can add/edit/remove four-option questions, choose one correct answer, and publish a validated competition to lock its content and timing. PostgreSQL stores accounts, hashed sessions, competitions, questions, and options. Room hosting and guest admission are next; sockets are not implemented yet.
+Organisers can sign up, build and publish private MCQ competitions, and host one room at a time. Guests can join without an account by room code or personal invitation. Active and closed rooms show the organiser a stable roster with optional invitation references. Live lobby updates, presence, and readiness are next.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
@@ -43,7 +43,7 @@ npm run start:server # Run the compiled backend after building
 npm run db:check    # Verify the local PostgreSQL connection
 npm run db:migrate  # Apply pending database migrations
 npm run test:db     # Check migration/constraints in an isolated temporary schema
-npm run test:server # Run schema, auth, and competition ownership/validation tests
+npm run test:server # Run schema, auth, competition, and room admission tests
 ```
 
 Vite's `/api` proxy is local tooling, not a production API gateway. `preview` is also a local preview, not a deployment server. Production hosting and API routing will be configured in the deployment step; the backend currently binds to this computer only.
@@ -58,11 +58,12 @@ src/
   components/ui/       Generic Button, TextField, Card, and Badge
   components/layout/   Generic PageContainer
   features/home/       Homepage sections and page composition
-  features/join/       Guest join preview components and page
+  features/join/       Public room-code entry page
   features/auth/       Signup/login forms, session hooks, and protected routing
   features/organiser/  Protected organiser overview
   features/competitions/ Draft library, shared editor, API calls, and hooks
   features/questions/  Question workspace, editor, cards, API calls, and hooks
+  features/rooms/      Host dashboard, guest admission, and waiting room
   styles/              Named colour tokens and shared base styles
   index.css            Stylesheet imports
   lib/query-client.ts  Shared TanStack Query cache
@@ -85,18 +86,21 @@ docs/
   organiser-login.md    Login, cookies, session expiry, logout, and frontend flow
   competition-drafts.md Draft API, ownership, database fields, and editor behavior
   questions-and-publication.md Question IDs, transactions, publishing, and frozen content
+  room-admission.md    Room codes, invitations, participant identity, and cookies
   frontend-design.md    Palette options, contrast checks, and component boundaries
 ```
 
 Keep generic primitives in `src/components/`. Feature-specific UI goes in `src/features/<feature>/components/`, with route-level composition in that feature's `pages/`. Application-wide routing/header/footer live in `src/app/`. Shared components must not import features. See the [frontend design guide](docs/frontend-design.md).
 
-Routes: `/` (home), `/join`, `/login`, `/signup`, `/organiser` (requires login), `/organiser/competitions/new`, `/organiser/competitions/:id/edit`, `/organiser/competitions/:id/questions`, and a not-found fallback. Hosting must eventually serve `index.html` for frontend routes while preserving `/api` handling; the Vite development server already supports direct route loading.
+Public routes include `/`, `/join`, `/join/:code`, `/rooms/:id`, `/login`, and `/signup`. Organiser routes live under `/organiser` and require login, including `/organiser/rooms/:id`. Hosting must eventually serve `index.html` for frontend routes while preserving `/api` handling; the Vite development server already supports direct route loading.
 
 To try authentication, create an account at `/signup`, continue to `/login`, and enter its email and password. Refresh `/organiser` to check session restoration, then log out. API clients testing login/logout must send `X-Quizzent-Request: 1` and retain the response cookie. See the [login guide](docs/organiser-login.md).
 
 From `/organiser`, choose Create your first competition. Save a title, optional description, and question time (default 10 seconds, allowed 5–120). The draft appears in your library; select Edit draft to update it. Saving does not publish or open a room. See the [draft guide](docs/competition-drafts.md).
 
 Choose Manage questions from the competition details. Save each question with four distinct options and one correct answer. Review before choosing Publish competition: publication permanently locks content/settings through the API and does not open a live room. See the [questions and publication guide](docs/questions-and-publication.md).
+
+Choose **Host room** on a published competition. Share the room code if open admission is allowed, or create a personal invitation with a reference you recognise. From another browser profile, join as a guest and refresh the organiser roster to see the guest's nickname, participant number, and invitation reference. See the [room admission guide](docs/room-admission.md).
 
 ## Stack
 
@@ -123,6 +127,6 @@ Choose Manage questions from the competition details. Save each question with fo
 
 The initial commit on `main` contains setup only. Continue work on a separate feature branch and merge reviewed changes through pull requests. Keep changes small and focused on one feature at a time.
 
-Foundation, signup, login, and drafts were merged through [PR #1](https://github.com/ahmxd18/quizzent/pull/1), [PR #2](https://github.com/ahmxd18/quizzent/pull/2), [PR #3](https://github.com/ahmxd18/quizzent/pull/3), and [PR #4](https://github.com/ahmxd18/quizzent/pull/4). Question editing/publication is on `feature/question-editor`, based on updated `main`. Finish and merge each feature before starting its successor from main.
+Foundation, signup, login, drafts, and question editing/publication were merged through [PRs #1–#5](https://github.com/ahmxd18/quizzent/pulls?q=is%3Apr+is%3Amerged). Finish and merge each feature before starting its successor from main.
 
 Explain unfamiliar TypeScript, Socket.IO, and PostgreSQL concepts briefly as they appear. Use short, natural code comments where they clarify a decision. Never commit real credentials or `.env` files.
