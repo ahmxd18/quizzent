@@ -7,8 +7,9 @@ import { createRoomSchema, invitationSchema } from './room.schema.js'
 import { closeRoom, createRoom, getOwnedRoom, listRooms } from './room.service.js'
 import { createInvitation, renewInvitation } from './invitation.service.js'
 import { emptyBody, jsonWrites, noStore, validateBody, validateId } from './room.http.js'
+import type { RoomChanged } from '../lobby/lobby.server.js'
 
-export function createRoomRouter(database: Pool) {
+export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   const router = express.Router()
   router.use(noStore, requireSameOriginRequest, requireSession(database), jsonWrites, express.json({ limit: '8kb' }))
   router.param('id', validateId)
@@ -28,7 +29,9 @@ export function createRoomRouter(database: Pool) {
   })
   router.post('/:id/close', emptyBody, async (request, response) => {
     const user: SessionUser = response.locals.user
-    await closeRoom(database, user.id, String(request.params.id))
+    const roomId = String(request.params.id)
+    await closeRoom(database, user.id, roomId)
+    roomChanged?.(roomId, 'closed')
     response.json({ message: 'Room closed.' })
   })
   router.post('/:id/invitations', validateBody(invitationSchema), async (request, response) => {

@@ -31,4 +31,4 @@ The invitation secret lives in the link's URL fragment (the part after `#`), so 
 4. Refresh the organiser roster. Check that the reference and nickname appear separately. For a code-only guest, check that the row is unverified.
 5. Close the room and reopen its dashboard from the organiser's room list. The roster is still there.
 
-Roster updates currently use the **Refresh** button. Step 10 adds Socket.IO updates, presence, and readiness.
+The organiser roster updates automatically while the live connection is available. See the [live lobby guide](live-lobby.md) for online counts and readiness.

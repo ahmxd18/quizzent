@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-Organisers can sign up, build and publish private MCQ competitions, and host one room at a time. Guests can join without an account by room code or personal invitation. Active and closed rooms show the organiser a stable roster with optional invitation references. Live lobby updates, presence, and readiness are next.
+Organisers can sign up, build and publish private MCQ competitions, and host one room at a time. Guests can join without an account by room code or personal invitation and mark themselves ready. Organisers see live online and ready counts and keep access to the saved roster after the room closes.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
@@ -100,13 +100,12 @@ From `/organiser`, choose Create your first competition. Save a title, optional 
 
 Choose Manage questions from the competition details. Save each question with four distinct options and one correct answer. Review before choosing Publish competition: publication permanently locks content/settings through the API and does not open a live room. See the [questions and publication guide](docs/questions-and-publication.md).
 
-Choose **Host room** on a published competition. Share the room code if open admission is allowed, or create a personal invitation with a reference you recognise. From another browser profile, join as a guest and refresh the organiser roster to see the guest's nickname, participant number, and invitation reference. See the [room admission guide](docs/room-admission.md).
+Choose **Host room** on a published competition. Share the room code if open admission is allowed, or create a personal invitation with a reference you recognise. From another browser profile, join and mark yourself ready to see the organiser roster update automatically. See the [room admission guide](docs/room-admission.md) and the [live lobby guide](docs/live-lobby.md).
 
 ## Stack
 
 - Frontend: React, Vite, TypeScript, Tailwind CSS, TanStack Query, React Router, Lucide icons.
-- Backend foundation: Node.js, Express, TypeScript, PostgreSQL via pg.
-- Planned backend addition: Socket.IO.
+- Backend: Node.js, Express, TypeScript, PostgreSQL via pg, and Socket.IO.
 - Hosting: aim for free or minimal cost; select providers when deployment is needed.
 
 ## A few explanations

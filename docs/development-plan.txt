@@ -84,7 +84,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Check: name/capacity races, duplicate joins, invalid codes, and refresh identity.
     Split room creation, guest identity, and join UI into focused commits.
 
-10. [ ] Live lobby and readiness
+10. [x] Live lobby and readiness
     Add Socket.IO only now; authenticate guest/organiser subscriptions.
     Add ready/unready, distinct ready counts, and short presence leases.
     A presence lease means a competitor counts only while recently connected.
@@ -155,9 +155,7 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–08 were merged through PRs #1–#5. Step 09 is implemented on
-feature/room-admission. Hosts can open a room, create personal invitations,
-and review guest identity in active and closed rosters. Guests can join without
-signing up. Rosters refresh on request.
-Next: review and merge room admission, then add live lobby updates, presence,
-and readiness with Socket.IO (step 10).
+Steps 01–09 were merged through PRs #1–#6. Step 10 adds authenticated live
+lobbies with online and ready counts. The same participant counts once across
+tabs, and the organiser roster updates as guests join.
+Next: automatic start and a five-second warning (step 11).
