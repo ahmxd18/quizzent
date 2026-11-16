@@ -59,6 +59,8 @@ test('rooms and guest admission', async context => {
     const other = await createOrganiser(pool, { displayName: 'Other Owner', email: 'other@example.test', password: 'another room test passphrase' })
     const draft = await createCompetition(pool, owner.id, { title: 'Room Test', description: '', questionTimeSeconds: 10 })
     await saveQuestion(pool, owner.id, draft.id, { prompt: 'Pick A', options: ['A', 'B', 'C', 'D'], correctOptionIndex: 0 })
+    await saveQuestion(pool, owner.id, draft.id, { prompt: 'Pick E', options: ['E', 'F', 'G', 'H'], correctOptionIndex: 0 })
+    await saveQuestion(pool, owner.id, draft.id, { prompt: 'Pick I', options: ['I', 'J', 'K', 'L'], correctOptionIndex: 0 })
     await publishCompetition(pool, owner.id, draft.id)
     const unpublished = await createCompetition(pool, owner.id, { title: 'Not ready', description: '', questionTimeSeconds: 10 })
     const ownerCookie = `quizzent_session=${await createSession(pool, owner.id)}`
@@ -350,7 +352,7 @@ test('rooms and guest admission', async context => {
         for (const socket of sockets) socket.disconnect()
       }
     })
-    await context.test('starts once, restarts an interrupted warning, and locks only live ready guests into the roster', async () => {
+    await context.test('starts once, restarts an interrupted warning, and locks only live ready guests into the roster', async startTest => {
       const opened = await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open', lobbySeconds: 2, minReady: 2 })
       assert.equal(opened.status, 201)
       const { room: live } = await opened.json()
@@ -394,6 +396,8 @@ test('rooms and guest admission', async context => {
       try {
         const host = await connect('organiser', ownerCookie)
         const [one, two, observer] = await Promise.all([join('Ready One'), join('Ready Two'), join('Observer')])
+        const attemptPath = `/guest/rooms/${live.id}/attempt`
+        assert.equal((await send(attemptPath, 'GET', undefined, one.cookie)).status, 409)
         const [first, second] = await Promise.all([connect('guest', one.cookie), connect('guest', two.cookie), connect('guest', observer.cookie)])
         const results = await Promise.all([first, second].map(socket => socket.timeout(2_000).emitWithAck('lobby:ready', true)))
         assert.ok(results.every(result => result.ok))
@@ -438,7 +442,80 @@ test('rooms and guest admission', async context => {
         const ownStatus = async (cookie: string) => (await (await send(`/guest/rooms/${live.id}`, 'GET', undefined, cookie)).json()).participant.admitted
         assert.equal(await ownStatus(one.cookie), true)
         assert.equal(await ownStatus(observer.cookie), false)
+        await startTest.test('assigns saved question and option orders to only the starting roster', async () => {
+          const { rows: assignments } = await pool!.query(
+            `SELECT aq.participant_id, aq.question_id, aq.position, aq.option_order,
+               ARRAY(SELECT o.id FROM question_options o WHERE o.question_id = aq.question_id) AS options
+             FROM quiz_attempt_questions aq
+             JOIN room_participants p ON p.id = aq.participant_id
+             WHERE p.room_id = $1 ORDER BY aq.participant_id, aq.position`, [live.id],
+          )
+          assert.equal(assignments.length, 6)
+          for (const member of [one, two]) {
+            const order = assignments.filter(row => row.participant_id === member.participantId)
+            assert.deepEqual(order.map(row => row.position), [1, 2, 3])
+            assert.equal(new Set(order.map(row => row.question_id)).size, 3)
+            for (const row of order) assert.deepEqual(new Set(row.option_order), new Set(row.options))
+
+            const response = await send(attemptPath, 'GET', undefined, member.cookie)
+            assert.equal(response.status, 200)
+            assert.equal(response.headers.get('Cache-Control'), 'no-store')
+            const attempt = await response.json()
+            assert.deepEqual(Object.keys(attempt).sort(), ['answered', 'phase', 'question', 'total'])
+            assert.deepEqual(Object.keys(attempt.question).sort(), ['id', 'options', 'prompt'])
+            assert.ok(attempt.question.options.every((option: object) => Object.keys(option).sort().join() === 'id,text'))
+            assert.equal(attempt.question.id, order[0].question_id)
+            assert.deepEqual(attempt.question.options.map((option: { id: string }) => option.id), order[0].option_order)
+            assert.deepEqual(await (await send(attemptPath, 'GET', undefined, member.cookie)).json(), attempt)
+          }
+          const { rows: [repeated] } = await pool!.query('SELECT assign_quiz_attempts($1) AS assigned', [live.id])
+          assert.equal(repeated.assigned, 0)
+          assert.equal((await send(attemptPath, 'GET', undefined, observer.cookie)).status, 403)
+          assert.equal((await send(attemptPath, 'GET', undefined, await guest())).status, 404)
+          assert.equal((await send(attemptPath, 'GET', undefined, '')).status, 401)
+        })
+        await startTest.test('locks one answer, rejects future questions, and makes retries safe', async () => {
+          const first = await (await send(attemptPath, 'GET', undefined, one.cookie)).json()
+          const answerPath = `${attemptPath}/answers`
+          const save = (input: { questionId: string; optionId: string; requestId: string }, cookie = one.cookie) => send(answerPath, 'POST', input, cookie)
+          const { rows: [future] } = await pool!.query(
+            'SELECT question_id, option_order FROM quiz_attempt_questions WHERE participant_id = $1 AND position = 2', [one.participantId],
+          )
+          const candidate = { questionId: first.question.id, optionId: first.question.options[0].id, requestId: randomUUID() }
+          const alternative = { ...candidate, optionId: first.question.options[1].id, requestId: randomUUID() }
+          assert.equal((await save({ ...candidate, questionId: future.question_id, optionId: future.option_order[0] })).status, 409)
+          assert.equal((await save({ ...candidate, optionId: future.option_order[0] })).status, 400)
+          assert.equal((await save(candidate, observer.cookie)).status, 403)
+          assert.equal((await fetch(base + answerPath, { method: 'POST', headers: { Cookie: one.cookie } })).status, 403)
+
+          const responses = await Promise.all([save(candidate), save(alternative)])
+          assert.deepEqual(responses.map(response => response.status).sort(), [200, 409])
+          const winner = responses[0].ok ? candidate : alternative
+          const current = await responses.find(response => response.ok)!.json()
+          assert.equal(current.question.id, future.question_id)
+          assert.equal(current.answered, 1)
+          assert.deepEqual(await (await save(winner)).json(), current)
+          assert.deepEqual(await (await send(attemptPath, 'GET', undefined, one.cookie)).json(), current)
+          assert.equal((await save({ ...winner, questionId: future.question_id, optionId: future.option_order[0] })).status, 409)
+
+          const second = { questionId: current.question.id, optionId: current.question.options[0].id, requestId: randomUUID() }
+          const retries = await Promise.all([save(second), save(second)])
+          assert.deepEqual(retries.map(response => response.status), [200, 200])
+          const last = await retries[0].json()
+          assert.deepEqual(await retries[1].json(), last)
+          assert.equal(last.answered, 2)
+          const finished = await save({ questionId: last.question.id, optionId: last.question.options[0].id, requestId: randomUUID() })
+          assert.deepEqual(await finished.json(), { phase: 'complete', answered: 3, total: 3 })
+          assert.deepEqual(await (await save(winner)).json(), { phase: 'complete', answered: 3, total: 3 })
+          assert.equal((await (await send(attemptPath, 'GET', undefined, two.cookie)).json()).answered, 0)
+          const { rows: saved } = await pool!.query(
+            'SELECT option_id, request_id FROM quiz_answers WHERE participant_id = $1', [one.participantId],
+          )
+          assert.equal(saved.length, 3)
+          assert.equal(saved.find(row => row.request_id === winner.requestId)?.option_id, winner.optionId)
+        })
         assert.equal((await send(`/rooms/${live.id}/close`, 'POST', {})).status, 200)
+        assert.equal((await send(attemptPath, 'GET', undefined, one.cookie)).status, 409)
         assert.equal((await read()).room.startedAt, final.room.startedAt)
       } finally {
         for (const socket of sockets) socket.disconnect()
