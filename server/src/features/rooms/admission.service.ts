@@ -9,8 +9,8 @@ export async function previewRoom(database: Pool, code: string, guestId: string 
   const { rows: [room] } = await database.query<Room>(`SELECT ${roomColumns} FROM rooms r JOIN competitions c ON c.id = r.competition_id WHERE r.code = $1`, [code])
   if (!room) throw new RoomError(404, 'Room not found. Check the code with your organiser.')
   const { rows: names } = await database.query<{ nickname: string }>('SELECT nickname FROM room_participants WHERE room_id = $1', [room.id])
-  const { rows: existing } = guestId ? await database.query('SELECT id FROM room_participants WHERE room_id = $1 AND guest_id = $2', [room.id, guestId]) : { rows: [] }
-  return { room, suggestedNickname: suggestNickname(names.map(row => row.nickname)), participantId: existing[0]?.id ?? null }
+  const { rows: existing } = guestId ? await database.query<{ id: string; nickname: string }>('SELECT id, nickname FROM room_participants WHERE room_id = $1 AND guest_id = $2', [room.id, guestId]) : { rows: [] }
+  return { room, suggestedNickname: existing[0]?.nickname ?? suggestNickname(names.map(row => row.nickname)), participantId: existing[0]?.id ?? null }
 }
 export async function joinRoom(database: Pool, code: string, guestId: string, nickname: string, invitationToken?: string) {
   try {

@@ -103,6 +103,9 @@ test('rooms and guest admission', async context => {
       assert.deepEqual(responses.map(response => response.status).sort(), [200, 409])
       if (responses[0].status !== 200) johnCookie = otherGuest
       const first = await (await send(`/guest/rooms/${room.id}`, 'GET', undefined, johnCookie)).json()
+      const returning = await (await send(`/room-entry/${room.code}`, 'GET', undefined, johnCookie)).json()
+      assert.equal(returning.participantId, first.participant.id)
+      assert.equal(returning.suggestedNickname, first.participant.nickname)
       const again = await send(`/room-entry/${room.code}/join`, 'POST', { nickname: 'A new nickname' }, johnCookie)
       assert.equal((await again.json()).participantId, first.participant.id)
       assert.equal((await (await send(`/guest/rooms/${room.id}`, 'GET', undefined, johnCookie)).json()).participant.nickname, first.participant.nickname)
@@ -211,6 +214,7 @@ test('rooms and guest admission', async context => {
       assert.equal((await send('/room-entry/bad', 'GET', undefined, '')).status, 400)
       assert.equal((await send('/room-entry/ZZZZZZZZ', 'GET', undefined, '')).status, 404)
       assert.equal((await send(`/room-entry/${privateRoom.code}/join`, 'POST', { nickname: ' ' }, await guest())).status, 400)
+      assert.equal((await send(`/room-entry/${privateRoom.code}/join`, 'POST', { nickname: 'Name\u0000' }, await guest())).status, 400)
       assert.equal((await send(`/rooms/${privateRoom.id}/invitations`, 'POST', { reference: 'x'.repeat(9000) })).status, 413)
       const previous = process.env.NODE_ENV
       process.env.NODE_ENV = 'production'
