@@ -11,12 +11,16 @@ import { CreateCompetitionPage } from '../features/competitions/pages/CreateComp
 import { EditCompetitionPage } from '../features/competitions/pages/EditCompetitionPage'
 import { QuestionsPage } from '../features/questions/pages/QuestionsPage'
 import { OrganiserRoomPage } from '../features/rooms/pages/OrganiserRoomPage'
+import { RoomEntryPage } from '../features/rooms/pages/RoomEntryPage'
+import { GuestRoomPage } from '../features/rooms/pages/GuestRoomPage'
 
 // Data-router mode enables the editor's supported navigation blocker.
 const router = createBrowserRouter(createRoutesFromElements(
   <Route element={<AppLayout />}>
     <Route index element={<HomePage />} />
     <Route path="join" element={<JoinPage />} />
+    <Route path="join/:code" element={<RoomEntryPage />} />
+    <Route path="rooms/:id" element={<GuestRoomPage />} />
     <Route path="login" element={<LoginPage />} />
     <Route path="signup" element={<SignupPage />} />
     <Route element={<RequireSession />}>

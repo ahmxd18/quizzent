@@ -11,6 +11,13 @@ const titles: Record<string, string> = {
   '/organiser': 'Organiser space — Quizzent',
   '/organiser/competitions/new': 'Create competition — Quizzent',
 }
+const routeTitles: [RegExp, string][] = [
+  [/^\/join\/[^/]+$/, 'Join room'],
+  [/^\/rooms\/[^/]+$/, 'Your room'],
+  [/^\/organiser\/rooms\/[^/]+$/, 'Manage room'],
+  [/^\/organiser\/competitions\/[^/]+\/questions$/, 'Competition questions'],
+  [/^\/organiser\/competitions\/[^/]+\/edit$/, 'Competition details'],
+]
 
 export function AppLayout() {
   const { pathname } = useLocation()
@@ -18,7 +25,8 @@ export function AppLayout() {
   const previousPath = useRef(pathname)
 
   useEffect(() => {
-    document.title = titles[pathname] ?? (/^\/organiser\/competitions\/[^/]+\/questions$/.test(pathname) ? 'Competition questions — Quizzent' : /^\/organiser\/competitions\/[^/]+\/edit$/.test(pathname) ? 'Competition details — Quizzent' : 'Page not found — Quizzent')
+    const routeTitle = routeTitles.find(([pattern]) => pattern.test(pathname))?.[1]
+    document.title = titles[pathname] ?? `${routeTitle ?? 'Page not found'} — Quizzent`
     if (previousPath.current !== pathname) {
       // Announce the new page to keyboard/screen-reader users after navigation.
       mainRef.current?.focus({ preventScroll: true })
@@ -29,7 +37,8 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <a href="#main-content" className="sr-only rounded-full bg-brand px-5 py-3 font-semibold text-on-brand focus:not-sr-only focus:fixed focus:left-5 focus:top-5 focus:z-50">Skip to content</a>
+      {/* Move focus without replacing a personal invitation's URL fragment. */}
+      <a href="#main-content" onClick={event => { event.preventDefault(); mainRef.current?.focus() }} className="sr-only rounded-full bg-brand px-5 py-3 font-semibold text-on-brand focus:not-sr-only focus:fixed focus:left-5 focus:top-5 focus:z-50">Skip to content</a>
       <SiteHeader />
       <main ref={mainRef} id="main-content" tabIndex={-1} className="flex-1 focus-visible:outline-none">
         <Outlet />
