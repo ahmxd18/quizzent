@@ -19,6 +19,8 @@ Quizzent is a learning and resume project. Build one feature at a time, keep the
 - Every question in a competition uses the same organiser-configured time limit, defaulting to 10 seconds.
 - Drafts use a compact library and dedicated create/edit pages, with manual saving and unsaved-change warnings.
 - Draft title: trimmed 1–100 characters; optional description: trimmed up to 500 characters; question time: whole seconds from 5 to 120.
+- The initial question editor uses four distinct options and one correct answer, with up to 100 questions, 1,000 characters per prompt, and 200 per option.
+- Publication locks competition details, timing, questions, and answers. Published content remains owner-only until room admission is implemented; no unpublish flow is provided.
 - Count only currently ready competitors toward the minimum.
 - After the configured lobby countdown expires, reaching the minimum triggers a short five-second start countdown.
 - Every competitor receives all questions in a persisted, independently randomised sequence.

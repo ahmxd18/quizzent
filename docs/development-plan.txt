@@ -68,7 +68,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Add a simple organiser dashboard and draft form.
     Check: ownership, invalid settings, and attempts to edit someone else's draft.
 
-08. [ ] Question editing and publication
+08. [x] Question editing and publication
     Add single-correct MCQs with stable question/option IDs and exactly one key.
     Add the editor and validation; freeze content and rules when published.
     Check: invalid questions and changes to frozen content.
@@ -154,11 +154,12 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–07 are complete. Foundation, signup, and login were merged through PRs
-#1–#3. Private competition drafts are implemented on feature/competition-drafts,
-with separate migration, API, library, and editor commits. All 30 database/API
-checks pass. Browser creation, editing, validation, refresh, discard/keep-editing,
-unsaved-refresh warning, and mobile layouts were checked.
-Next: review/merge drafts, then start question editing and publication (step 08)
-on a new focused branch. The guest join screen is still a preview. No live rooms
-or sockets exist yet.
+Steps 01–08 are complete. Foundation, signup, login, and drafts were merged through
+PRs #1–#4. Question editing and publication are on feature/question-editor, with
+separate editing/publication backend and frontend commits. All 39 database/API
+checks pass, including ownership, stable IDs, frozen-content rejection, and an
+edit/publication race. Browser question editing, validation, unsaved-change guards,
+publication, refresh, read-only views, and mobile layouts were checked.
+Next: review/merge questions, then room creation and guest admission (step 09) on
+a new focused branch. The guest join screen is still a preview; no live rooms or
+sockets exist yet.

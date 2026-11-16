@@ -5,6 +5,8 @@ import { requireSameOriginRequest, requireSession } from '../auth/session.http.j
 import type { SessionUser } from '../auth/session.service.js'
 import { competitionSchema } from './competition.schema.js'
 import { createCompetition, getCompetition, listCompetitions, updateCompetition } from './competition.service.js'
+import { createQuestionRouter } from '../questions/question.routes.js'
+import { publishCompetition } from './publication.service.js'
 
 export function createCompetitionRouter(database: Pool) {
   const router = express.Router()
@@ -20,6 +22,14 @@ export function createCompetitionRouter(database: Pool) {
   router.param('id', (_request, response, next, id: string) => {
     if (!z.uuid().safeParse(id).success) { response.status(400).json({ message: 'Invalid competition ID.' }); return }
     next()
+  })
+  router.use('/:id/questions', createQuestionRouter(database))
+  router.post('/:id/publish', async (request, response) => {
+    if (!z.strictObject({}).safeParse(request.body).success) {
+      response.status(400).json({ message: 'Publishing does not accept competition changes. Send an empty JSON object.' }); return
+    }
+    const user: SessionUser = response.locals.user
+    response.json({ competition: await publishCompetition(database, user.id, request.params.id) })
   })
 
   router.get('/', async (_request, response) => {

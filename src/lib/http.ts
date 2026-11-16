@@ -31,7 +31,11 @@ export async function putJson<T>(path: string, body: unknown): Promise<T> {
   return requestJson<T>('put', path, body)
 }
 
-async function requestJson<T>(method: 'get' | 'post' | 'put', path: string, body?: unknown): Promise<T> {
+export async function deleteJson<T>(path: string): Promise<T> {
+  return requestJson<T>('delete', path)
+}
+
+async function requestJson<T>(method: 'get' | 'post' | 'put' | 'delete', path: string, body?: unknown): Promise<T> {
   try {
     // Axios serialises the object and parses the JSON response for us.
     const response = await client.request<T>({ method, url: path, data: body })
