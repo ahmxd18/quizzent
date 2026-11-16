@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-Organisers can sign up, build and publish private MCQ competitions, and host one room at a time. Guests can join without an account by room code or personal invitation and mark themselves ready. Organisers see live online and ready counts and keep access to the saved roster after the room closes.
+Organisers can sign up, publish MCQ competitions, and host one room at a time. Guests join by room code or personal invitation and mark themselves ready. Once the lobby timer ends and enough guests are ready, a five-second warning leads into the automatic start. Organisers can review the starting roster after the room closes.
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 

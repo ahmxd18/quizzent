@@ -90,11 +90,10 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     A presence lease means a competitor counts only while recently connected.
     Check: two tabs count once, disconnect expiry, reconnect, and unauthorised rooms.
 
-11. [ ] Automatic start and five-second warning
+11. [x] Automatic start and five-second warning
     Persist lobby countdown deadlines; start only after countdown and minimum-ready rules.
     When eligible, run a five-second warning before atomic roster admission.
-    Proposed: if ready count falls below minimum, wait and restart the five seconds later.
-    Confirm this behaviour when implementing it; it is currently a proposed default.
+    If ready count falls below minimum, wait and run a fresh five seconds once eligible.
     Close late admission and show the committed state to all clients.
     Check: threshold races, disconnect during warning, repeated start triggers.
 
@@ -155,7 +154,7 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–09 were merged through PRs #1–#6. Step 10 adds authenticated live
-lobbies with online and ready counts. The same participant counts once across
-tabs, and the organiser roster updates as guests join.
-Next: automatic start and a five-second warning (step 11).
+Steps 01–10 were merged through PRs #1–#7. Step 11 saves the lobby timer,
+five-second warning, and starting roster. Only online ready guests make the
+roster. Room codes and invitations stop admitting new guests after the start.
+Next: assign questions and accept one answer per question (step 12).

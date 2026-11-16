@@ -24,6 +24,9 @@ Quizzent is a learning and resume project. Build one feature at a time, keep the
 - Publication locks competition details, timing, questions, and answers. Opening a room reveals the title to guests; question contents remain private until the timed question flow is implemented.
 - Count only currently ready competitors toward the minimum.
 - After the configured lobby countdown expires, reaching the minimum triggers a short five-second start countdown.
+- Each room defaults to a 60-second lobby countdown and two ready guests. The organiser can choose 0–3,600 seconds and 1–50 ready guests when opening a room.
+- A dip below the ready minimum during the warning cancels it. A fresh five seconds starts when enough guests are ready again.
+- When a competition starts, admission closes and the starting roster consists of guests who are online and ready.
 - Every competitor receives all questions in a persisted, independently randomised sequence.
 - One question at a time; submitted answers cannot be changed or revisited.
 - Rank by correct answers first and total answer time second.
@@ -32,8 +35,6 @@ Quizzent is a learning and resume project. Build one feature at a time, keep the
 
 ## Proposed defaults to confirm when implementing each feature
 
-- If ready count drops below the minimum during the five-second start countdown, return to waiting. Start a fresh five seconds when enough competitors are ready again.
-- Close admission once the competition starts.
 - Timers continue through an individual competitor's disconnect; reconnecting restores the same guest attempt.
 - Resolve unanswered questions as incorrect with a full question-time penalty. Use shared ranks for exact score/time ties.
 

@@ -12,7 +12,7 @@ npm run db:migrate
 
 `node-pg-migrate` runs pending SQL files in order and records them in its `pgmigrations` table. Running the command again leaves already-applied migrations alone. Migration writes are transactional, so a failed migration does not leave half its changes applied.
 
-Keep applied migrations unchanged. Add a new file with the next migration number for each structure change. Do not run the SQL file directly in psql, because that bypasses the migration history. Drafts, questions/options, and publication are added in migrations 0002–0004; see the [question guide](questions-and-publication.md). Migration 0005 adds the tables in the [room admission guide](room-admission.md).
+Keep applied migrations unchanged. Add a new file with the next migration number for each structure change. Do not run the SQL file directly in psql, because that bypasses the migration history. Migrations 0002–0004 add drafts, questions, options, and publication as described in the [question guide](questions-and-publication.md). Migration 0005 adds [room admission](room-admission.md), and migration 0006 adds the [automatic start deadlines and roster](live-lobby.md#automatic-start).
 
 The tool is a development dependency. Deployment will need an explicit migration step with this dependency available before starting the new backend version.
 
