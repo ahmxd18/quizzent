@@ -10,6 +10,7 @@ import { OrganiserPage } from '../features/organiser/pages/OrganiserPage'
 import { CreateCompetitionPage } from '../features/competitions/pages/CreateCompetitionPage'
 import { EditCompetitionPage } from '../features/competitions/pages/EditCompetitionPage'
 import { QuestionsPage } from '../features/questions/pages/QuestionsPage'
+import { OrganiserRoomPage } from '../features/rooms/pages/OrganiserRoomPage'
 
 // Data-router mode enables the editor's supported navigation blocker.
 const router = createBrowserRouter(createRoutesFromElements(
@@ -23,6 +24,7 @@ const router = createBrowserRouter(createRoutesFromElements(
       <Route path="organiser/competitions/new" element={<CreateCompetitionPage />} />
       <Route path="organiser/competitions/:id/edit" element={<EditCompetitionPage />} />
       <Route path="organiser/competitions/:id/questions" element={<QuestionsPage />} />
+      <Route path="organiser/rooms/:id" element={<OrganiserRoomPage />} />
     </Route>
     <Route path="*" element={<NotFoundPage />} />
   </Route>

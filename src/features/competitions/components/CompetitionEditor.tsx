@@ -6,6 +6,7 @@ import { Card } from '../../../components/ui/Card'
 import { ButtonLink } from '../../../components/ui/Button'
 import type { Competition } from '../api/competitions'
 import { CompetitionForm } from './CompetitionForm'
+import { HostRoomPanel } from '../../rooms/components/HostRoomPanel'
 
 export function CompetitionEditor({ competition }: { competition?: Competition }) {
   const published = competition?.status === 'published'
@@ -16,8 +17,9 @@ export function CompetitionEditor({ competition }: { competition?: Competition }
         <div className="mb-8 mt-7">
           <Badge tone="accent">{published ? 'Published · read only' : 'Private draft'}</Badge>
           <h1 className="mt-4 font-display text-4xl tracking-tight sm:text-5xl">{published ? 'Your challenge is ready.' : competition ? 'Make it your own.' : 'Start with a little curiosity.'}</h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted">{published ? 'Content and timing are locked. Opening a live room comes in the next step.' : competition ? 'Update your competition details and save when you’re ready.' : 'Name your competition, set its pace, and save your first draft.'}</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted">{published ? 'Content and timing are locked. Open a room to bring your guests together.' : competition ? 'Update your competition details and save when you’re ready.' : 'Name your competition, set its pace, and save your first draft.'}</p>
         </div>
+        {published && competition && <HostRoomPanel competitionId={competition.id} />}
         <div className="grid items-start gap-6 lg:grid-cols-3">
           <div className="min-w-0 lg:col-span-2">{published && competition ? <Card className="space-y-5 p-7"><h2 className="break-words text-2xl font-semibold">{competition.title}</h2><p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-muted">{competition.description || 'No description.'}</p><p className="text-sm">{competition.questionTimeSeconds} seconds per question</p></Card> : <CompetitionForm key={competition?.id ?? 'new'} competition={competition} />}</div>
           <aside aria-label="About competition drafts" className="space-y-5">
