@@ -11,16 +11,17 @@ Quizzent is a learning and resume project. Build one feature at a time, keep the
 - Avoid blue branding. The current design uses deep plum, soft citron, and warm ivory.
 - Keep generic UI in src/components/ and feature-specific UI in src/features/<feature>/components/; keep routes/providers and application chrome in src/app/.
 - Organisers register through organiser signup. Superadmin privileges are never granted through public signup.
-- Competitors can join as guests using a room code or invitation link.
-- Generate guest names from English words; competitors may edit them. Names must be unique within the competition.
-- Identify returning guests by a separate private session, never by their display name alone.
+- Competitors join as guests. Open rooms accept a code or personal invitation; invitation-only rooms require a personal invitation.
+- Suggest names from local English word lists. Guests may edit before joining. Nicknames are unique within a room after normalising whitespace and ignoring capitalisation.
+- Give each participant a stable room number and UUID. Use a separate private browser session to restore membership for up to 24 hours.
+- Show the organiser's private reference when a guest used their personal invitation; mark code-only joins unverified. Possession of a link does not establish real-world identity.
 - Target 30–50 competitors per room, capped at 50 for the MVP. This is a target to validate, not a measured capacity guarantee.
 - An organiser may host only one active room at a time.
 - Every question in a competition uses the same organiser-configured time limit, defaulting to 10 seconds.
 - Drafts use a compact library and dedicated create/edit pages, with manual saving and unsaved-change warnings.
 - Draft title: trimmed 1–100 characters; optional description: trimmed up to 500 characters; question time: whole seconds from 5 to 120.
 - The initial question editor uses four distinct options and one correct answer, with up to 100 questions, 1,000 characters per prompt, and 200 per option.
-- Publication locks competition details, timing, questions, and answers. Published content remains owner-only until room admission is implemented; no unpublish flow is provided.
+- Publication locks competition details, timing, questions, and answers. Opening a room reveals the title to guests; question contents remain private until the timed question flow is implemented.
 - Count only currently ready competitors toward the minimum.
 - After the configured lobby countdown expires, reaching the minimum triggers a short five-second start countdown.
 - Every competitor receives all questions in a persisted, independently randomised sequence.
@@ -31,7 +32,6 @@ Quizzent is a learning and resume project. Build one feature at a time, keep the
 
 ## Proposed defaults to confirm when implementing each feature
 
-- Treat names as unique after trimming and case-insensitive comparison; preserve the chosen spelling for display.
 - If ready count drops below the minimum during the five-second start countdown, return to waiting. Start a fresh five seconds when enough competitors are ready again.
 - Close admission once the competition starts.
 - Timers continue through an individual competitor's disconnect; reconnecting restores the same guest attempt.

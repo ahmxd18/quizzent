@@ -74,8 +74,9 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Check: invalid questions and changes to frozen content.
     Keep question editing and publication as separate commits.
 
-09. [ ] Open one room and admit guests
-    Generate a unique room code and invitation link.
+09. [x] Open one room and admit guests
+    Offer open rooms with optional personal invitations and invitation-only rooms.
+    Give each guest a stable participant number and an optional organiser reference.
     Enforce one active hosted room per organiser and a maximum of 50 competitors.
     Generate editable English-word guest names unique within the room.
     Use a private guest session to restore identity; a name is not a credential.
@@ -154,12 +155,9 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–08 are complete. Foundation, signup, login, and drafts were merged through
-PRs #1–#4. Question editing and publication are on feature/question-editor, with
-separate editing/publication backend and frontend commits. All 39 database/API
-checks pass, including ownership, stable IDs, frozen-content rejection, and an
-edit/publication race. Browser question editing, validation, unsaved-change guards,
-publication, refresh, read-only views, and mobile layouts were checked.
-Next: review/merge questions, then room creation and guest admission (step 09) on
-a new focused branch. The guest join screen is still a preview; no live rooms or
-sockets exist yet.
+Steps 01–08 were merged through PRs #1–#5. Step 09 is implemented on
+feature/room-admission. Hosts can open a room, create personal invitations,
+and review guest identity in active and closed rosters. Guests can join without
+signing up. Rosters refresh on request.
+Next: review and merge room admission, then add live lobby updates, presence,
+and readiness with Socket.IO (step 10).
