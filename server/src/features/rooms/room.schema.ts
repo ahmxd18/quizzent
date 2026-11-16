@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-export const createRoomSchema = z.strictObject({ competitionId: z.uuid(), admissionMode: z.enum(['open', 'invitation']) })
+export const createRoomSchema = z.strictObject({
+  competitionId: z.uuid(),
+  admissionMode: z.enum(['open', 'invitation']),
+  lobbySeconds: z.number().int().min(0).max(3600).default(60),
+  minReady: z.number().int().min(1).max(50).default(2),
+})
 const isPlainText = (value: string) => !/\p{Cc}/u.test(value)
 export const invitationSchema = z.strictObject({ reference: z.string().trim().min(1, 'Enter an organiser reference.').max(100, 'Use 100 characters or fewer.').refine(isPlainText, 'Use plain text for the reference.') })
 export const joinRoomSchema = z.strictObject({

@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { io, type Socket } from 'socket.io-client'
 
 type OnlineParticipant = { participantId: string; ready: boolean }
-type Counts = { onlineCount: number; readyCount: number }
+type Counts = { onlineCount: number; readyCount: number; serverNow: number }
 type LobbyState = Counts & ({ participants: OnlineParticipant[] } | { ready: boolean })
 type ReadyReply = { ok: true } | { ok: false; message: string }
 type ServerEvents = { 'lobby:state': (state: LobbyState) => void; 'lobby:room-changed': () => void }
@@ -16,6 +16,7 @@ export function useLiveLobby(roomId: string, role: 'organiser' | 'guest', enable
   const socketRef = useRef<LobbySocket | null>(null)
   const [connection, setConnection] = useState<LobbyConnection>('connecting')
   const [state, setState] = useState<LobbyState>()
+  const [clockOffset, setClockOffset] = useState(0)
   const [updating, setUpdating] = useState(false)
   const [actionError, setActionError] = useState('')
 
@@ -34,6 +35,7 @@ export function useLiveLobby(roomId: string, role: 'organiser' | 'guest', enable
     socket.on('connect', refreshRoom)
     socket.on('lobby:room-changed', refreshRoom)
     socket.on('lobby:state', snapshot => {
+      setClockOffset(snapshot.serverNow - Date.now())
       setState(snapshot)
       setConnection('live')
     })
@@ -76,5 +78,5 @@ export function useLiveLobby(roomId: string, role: 'organiser' | 'guest', enable
     socketRef.current?.connect()
   }
 
-  return { connection, state: enabled && connection === 'live' ? state : undefined, setReady, updating, actionError, reconnect }
+  return { connection, state: enabled && connection === 'live' ? state : undefined, clockOffset, setReady, updating, actionError, reconnect }
 }

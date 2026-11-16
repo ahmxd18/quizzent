@@ -3,9 +3,10 @@ import type { Pool } from 'pg'
 import { Server } from 'socket.io'
 import { getLobbyAccess, type LobbyAccess } from './lobby-access.js'
 import { LobbyPresence } from './presence.js'
+import { createRoomStart } from './room-start.js'
 
 type OnlineParticipant = { participantId: string; ready: boolean }
-type Counts = { onlineCount: number; readyCount: number }
+type Counts = { onlineCount: number; readyCount: number; serverNow: number }
 type LobbyState = Counts & ({ participants: OnlineParticipant[] } | { ready: boolean })
 type ReadyReply = { ok: true } | { ok: false; message: string }
 type ClientEvents = { 'lobby:ready': (ready: boolean, reply: (result: ReadyReply) => void) => void }
@@ -17,7 +18,7 @@ type SocketData = { access: LobbyAccess }
 
 const channel = (roomId: string) => `lobby:${roomId}`
 
-export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs = 8_000) {
+export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs = 8_000, warningMs = 5_000) {
   const presence = new LobbyPresence(reconnectGraceMs)
   const io = new Server<ClientEvents, ServerEvents, Record<never, never>, SocketData>(server, {
     transports: ['websocket'],
@@ -32,13 +33,23 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
     },
   })
   let stopping = false
+  const notify = (roomId: string) => { io.to(channel(roomId)).emit('lobby:room-changed') }
+  const start = createRoomStart(
+    database,
+    roomId => presence.participants(roomId).filter(participant => participant.ready).map(participant => participant.participantId),
+    roomId => io.sockets.adapter.rooms.has(channel(roomId)),
+    notify,
+    warningMs,
+  )
 
   function publish(roomId: string) {
     const participants = presence.participants(roomId)
     const counts = {
       onlineCount: participants.length,
       readyCount: participants.filter(participant => participant.ready).length,
+      serverNow: Date.now(),
     }
+    start.observe(roomId, counts.readyCount)
     for (const id of io.sockets.adapter.rooms.get(channel(roomId)) ?? []) {
       const socket = io.sockets.sockets.get(id)
       if (!socket) continue
@@ -67,6 +78,7 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
     const access = socket.data.access
     const { roomId } = access
     void socket.join(channel(roomId))
+    start.watch(roomId, access.minReady)
     if (access.role === 'guest') presence.connect(roomId, access.participantId, socket.id)
     publish(roomId)
 
@@ -98,9 +110,13 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
     })
 
     socket.on('disconnect', () => {
-      if (stopping || access.role !== 'guest') return
-      presence.disconnect(roomId, access.participantId, socket.id)
-      publish(roomId)
+      if (stopping) return
+      if (access.role === 'guest') {
+        presence.disconnect(roomId, access.participantId, socket.id)
+        publish(roomId)
+      } else if (!io.sockets.adapter.rooms.has(channel(roomId))) {
+        start.observe(roomId, 0)
+      }
     })
   })
 
@@ -119,13 +135,15 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
   return {
     roomChanged(roomId: string, change: 'joined' | 'closed') {
       if (change === 'closed') {
+        start.forget(roomId)
         presence.clear(roomId)
         publish(roomId)
       }
-      io.to(channel(roomId)).emit('lobby:room-changed')
+      notify(roomId)
     },
     close() {
       stopping = true
+      start.stop()
       clearInterval(reviewTimer)
       presence.clearAll()
       return io.close()

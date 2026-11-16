@@ -1,14 +1,17 @@
 import { Button } from '../../../components/ui/Button'
+import type { Room } from '../api/rooms'
 import { useLiveLobby } from '../hooks/useLiveLobby'
 import { LobbyConnection } from './LobbyConnection'
+import { LobbyCountdown } from './LobbyCountdown'
 
-export function GuestReadiness({ roomId }: { roomId: string }) {
-  const lobby = useLiveLobby(roomId, 'guest', true)
+export function GuestReadiness({ room }: { room: Room }) {
+  const lobby = useLiveLobby(room.id, 'guest', true)
   const ready = lobby.state && 'ready' in lobby.state ? lobby.state.ready : undefined
 
   return (
     <section aria-label="Lobby readiness" className="mt-6 space-y-4 rounded-2xl border border-outline bg-surface-strong p-4 sm:p-5">
       <LobbyConnection connection={lobby.connection} onRetry={lobby.reconnect} />
+      {lobby.state && <LobbyCountdown room={room} readyCount={lobby.state.readyCount} clockOffset={lobby.clockOffset} />}
       <p className="text-sm text-muted" role="status">
         {ready === undefined ? 'Readiness is available when connected.' : ready ? 'You’re ready.' : 'Mark yourself ready when you’re set to play.'}
       </p>

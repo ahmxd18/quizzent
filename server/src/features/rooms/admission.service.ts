@@ -16,7 +16,7 @@ export async function joinRoom(database: Pool, code: string, guestId: string, ni
   try {
     return await inTransaction(database, async client => {
       // Admissions and closing share this lock; count, invitation claim, and insert are atomic.
-      const { rows: [room] } = await client.query('SELECT id, status, admission_mode FROM rooms WHERE code = $1 FOR UPDATE', [code])
+      const { rows: [room] } = await client.query('SELECT id, status, admission_mode, started_at FROM rooms WHERE code = $1 FOR UPDATE', [code])
       if (!room) throw new RoomError(404, 'Room not found.')
       const { rows: [invitation] } = invitationToken ? await client.query('SELECT id FROM room_invitations WHERE room_id = $1 AND token_hash = $2', [room.id, hashSecret(invitationToken)]) : { rows: [] }
       if (invitationToken && !invitation) throw new RoomError(403, 'This invitation is invalid or has been replaced. Ask your organiser for a new link.')
@@ -26,6 +26,7 @@ export async function joinRoom(database: Pool, code: string, guestId: string, ni
         return { roomId: room.id, participantId: existing.id }
       }
       if (room.status !== 'open') throw new RoomError(409, 'This room is closed to new guests.')
+      if (room.started_at) throw new RoomError(409, 'This competition has already started.')
       if (room.admission_mode === 'invitation' && !invitation) throw new RoomError(403, 'This room requires your personal invitation link.')
       if (invitation && (await client.query('SELECT id FROM room_participants WHERE invitation_id = $1', [invitation.id])).rowCount) throw new RoomError(409, 'This invitation has already been used. Return in the original browser or contact your organiser.')
       const { rows: [count] } = await client.query('SELECT count(*)::integer AS total, coalesce(max(participant_number), 0)::integer AS last FROM room_participants WHERE room_id = $1', [room.id])
@@ -39,8 +40,15 @@ export async function joinRoom(database: Pool, code: string, guestId: string, ni
   }
 }
 export async function getGuestRoom(database: Pool, guestId: string, roomId: string) {
-  const { rows: [participant] } = await database.query('SELECT id, nickname, participant_number AS "participantNumber" FROM room_participants WHERE room_id = $1 AND guest_id = $2', [roomId, guestId])
-  if (!participant) throw new RoomError(404, 'You have not joined this room in this browser.')
-  const { rows: [room] } = await database.query<Room>(`SELECT ${roomColumns} FROM rooms r JOIN competitions c ON c.id = r.competition_id WHERE r.id = $1`, [roomId])
+  // Read admission and the room together so they reflect the same start transaction.
+  const { rows: [record] } = await database.query<Room & { participant: { id: string; nickname: string; participantNumber: number; admitted: boolean } }>(
+    `SELECT ${roomColumns},
+      json_build_object('id', p.id, 'nickname', p.nickname, 'participantNumber', p.participant_number, 'admitted', p.admitted) AS participant
+     FROM rooms r JOIN competitions c ON c.id = r.competition_id
+     JOIN room_participants p ON p.room_id = r.id AND p.guest_id = $2
+     WHERE r.id = $1`, [roomId, guestId],
+  )
+  if (!record) throw new RoomError(404, 'You have not joined this room in this browser.')
+  const { participant, ...room } = record
   return { room, participant }
 }
