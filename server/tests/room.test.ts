@@ -6,7 +6,9 @@ import { resolve } from 'node:path'
 import { test } from 'node:test'
 import { runner } from 'node-pg-migrate'
 import { Client, Pool } from 'pg'
-import { createApp } from '../src/app.js'
+import { io, type Socket } from 'socket.io-client'
+import { setTimeout as delay } from 'node:timers/promises'
+import { createQuizzentServer } from '../src/server.js'
 import { createOrganiser } from '../src/features/auth/signup.service.js'
 import { createSession } from '../src/features/auth/session.service.js'
 import { createCompetition } from '../src/features/competitions/competition.service.js'
@@ -16,6 +18,24 @@ import { createGuestSession } from '../src/features/rooms/guest-session.service.
 import { hashSecret } from '../src/lib/secrets.js'
 import { joinRoom } from '../src/features/rooms/admission.service.js'
 
+type Snapshot = { onlineCount: number; readyCount: number; ready?: boolean; participants?: { participantId: string; ready: boolean }[] }
+
+function waitFor<T>(socket: Socket, event: string, matches: (value: T) => boolean = () => true) {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      socket.off(event, receive)
+      reject(new Error(`Timed out waiting for ${event}`))
+    }, 2_000)
+    function receive(value: T) {
+      if (!matches(value)) return
+      clearTimeout(timeout)
+      socket.off(event, receive)
+      resolve(value)
+    }
+    socket.on(event, receive)
+  })
+}
+
 test('rooms and guest admission', async context => {
   assert.ok(process.env.DATABASE_URL)
   const schema = `quizzent_rooms_test_${randomUUID().replaceAll('-', '')}`
@@ -23,7 +43,7 @@ test('rooms and guest admission', async context => {
   await admin.connect()
   let pool: Pool | undefined
   let created = false
-  let server: ReturnType<ReturnType<typeof createApp>['listen']> | undefined
+  let runtime: ReturnType<typeof createQuizzentServer> | undefined
   try {
     await admin.query(`CREATE SCHEMA "${schema}"`)
     created = true
@@ -37,9 +57,12 @@ test('rooms and guest admission', async context => {
     const unpublished = await createCompetition(pool, owner.id, { title: 'Not ready', description: '', questionTimeSeconds: 10 })
     const ownerCookie = `quizzent_session=${await createSession(pool, owner.id)}`
     const otherCookie = `quizzent_session=${await createSession(pool, other.id)}`
-    server = createApp(pool).listen(0, '127.0.0.1')
+    const reconnectGrace = 500
+    runtime = createQuizzentServer(pool, reconnectGrace)
+    const server = runtime.server.listen(0, '127.0.0.1')
     await once(server, 'listening')
-    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    const base = `${origin}/api`
     const send = (path: string, method = 'GET', body?: unknown, cookie = ownerCookie) => fetch(`${base}${path}`, {
       method, headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-Quizzent-Request': '1' },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -226,8 +249,100 @@ test('rooms and guest admission', async context => {
         assert.doesNotMatch(cookie, /Domain=/)
       } finally { if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous }
     })
+    await context.test('authorises live lobby members and counts readiness once across tabs and reconnects', async () => {
+      const response = await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open' })
+      assert.equal(response.status, 201)
+      const { room: liveRoom } = await response.json()
+      const guestCookie = await guest()
+      const sockets: Socket[] = []
+      function openSocket(role: 'organiser' | 'guest', cookie: string, socketOrigin = origin) {
+        const socket = io(origin, {
+          auth: { role, roomId: liveRoom.id },
+          extraHeaders: { Cookie: cookie, Origin: socketOrigin },
+          transports: ['websocket'],
+          autoConnect: false,
+          reconnection: false,
+        })
+        sockets.push(socket)
+        return socket
+      }
+      try {
+        for (const socket of [
+          openSocket('organiser', otherCookie),
+          openSocket('guest', guestCookie),
+          openSocket('organiser', ownerCookie, 'http://different-site.test'),
+        ]) {
+          const denied = waitFor<Error>(socket, 'connect_error')
+          socket.connect()
+          await denied
+          assert.equal(socket.connected, false)
+        }
+
+        const host = openSocket('organiser', ownerCookie)
+        const hostInitial = waitFor<Snapshot>(host, 'lobby:state')
+        host.connect()
+        assert.deepEqual(await hostInitial, { onlineCount: 0, readyCount: 0, participants: [] })
+        assert.equal((await host.timeout(2_000).emitWithAck('lobby:ready', true)).ok, false)
+
+        const joined = waitFor(host, 'lobby:room-changed')
+        const admission = await send(`/room-entry/${liveRoom.code}/join`, 'POST', { nickname: 'Ready Otter' }, guestCookie)
+        assert.equal(admission.status, 200)
+        const { participantId } = await admission.json()
+        await joined
+
+        const first = openSocket('guest', guestCookie)
+        const initial = waitFor<Snapshot>(first, 'lobby:state')
+        first.connect()
+        assert.deepEqual(await initial, { onlineCount: 1, readyCount: 0, ready: false })
+        const ready = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 1)
+        assert.equal((await first.timeout(2_000).emitWithAck('lobby:ready', true)).ok, true)
+        assert.deepEqual(await ready, { onlineCount: 1, readyCount: 1, participants: [{ participantId, ready: true }] })
+
+        const second = openSocket('guest', guestCookie)
+        const secondInitial = waitFor<Snapshot>(second, 'lobby:state')
+        second.connect()
+        assert.deepEqual(await secondInitial, { onlineCount: 1, readyCount: 1, ready: true })
+        const stillReady = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 1)
+        first.disconnect()
+        assert.equal((await stillReady).onlineCount, 1)
+        assert.equal((await second.timeout(2_000).emitWithAck('lobby:ready', 'true')).ok, false)
+
+        const offline = waitFor<Snapshot>(host, 'lobby:state', state => state.onlineCount === 0)
+        second.disconnect()
+        assert.equal((await offline).readyCount, 0)
+        const restored = waitFor<Snapshot>(first, 'lobby:state')
+        first.connect()
+        assert.equal((await restored).ready, true)
+
+        const offlineAgain = waitFor<Snapshot>(host, 'lobby:state', state => state.onlineCount === 0)
+        first.disconnect()
+        await offlineAgain
+        await delay(reconnectGrace + 50)
+        const reset = waitFor<Snapshot>(second, 'lobby:state')
+        second.connect()
+        assert.deepEqual(await reset, { onlineCount: 1, readyCount: 0, ready: false })
+        const readyAgain = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 1)
+        assert.equal((await second.timeout(2_000).emitWithAck('lobby:ready', true)).ok, true)
+        await readyAgain
+        const unready = waitFor<Snapshot>(first, 'lobby:state')
+        first.connect()
+        assert.equal((await unready).ready, true)
+        const updated = waitFor<Snapshot>(first, 'lobby:state', state => state.ready === false)
+        assert.equal((await second.timeout(2_000).emitWithAck('lobby:ready', false)).ok, true)
+        assert.equal((await updated).readyCount, 0)
+
+        const closed = waitFor(first, 'lobby:room-changed')
+        assert.equal((await send(`/rooms/${liveRoom.id}/close`, 'POST', {})).status, 200)
+        await closed
+        assert.equal((await first.timeout(2_000).emitWithAck('lobby:ready', true)).ok, false)
+        const history = await send(`/guest/rooms/${liveRoom.id}`, 'GET', undefined, guestCookie)
+        assert.equal((await history.json()).room.status, 'closed')
+      } finally {
+        for (const socket of sockets) socket.disconnect()
+      }
+    })
   } finally {
-    if (server) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()))
+    await runtime?.close()
     await pool?.end()
     try { if (created) await admin.query(`DROP SCHEMA "${schema}" CASCADE`) }
     finally { await admin.end() }

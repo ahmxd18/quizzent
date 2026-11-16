@@ -3,6 +3,7 @@ import { rateLimit } from 'express-rate-limit'
 import type { Pool } from 'pg'
 import { z } from 'zod'
 import { requireSameOriginRequest } from '../auth/session.http.js'
+import type { RoomChanged } from '../lobby/lobby.server.js'
 import { joinRoomSchema, roomCodeSchema } from './room.schema.js'
 import { getGuestRoom, joinRoom, previewRoom } from './admission.service.js'
 import { createGuestSession, findGuest, guestCookieSettings, guestSessionLifetimeMs } from './guest-session.service.js'
@@ -30,7 +31,7 @@ export function createGuestRouter(database: Pool) {
   return router
 }
 
-export function createRoomEntryRouter(database: Pool) {
+export function createRoomEntryRouter(database: Pool, roomChanged?: RoomChanged) {
   const router = express.Router()
   router.use(noStore, requireSameOriginRequest)
   router.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many room requests. Please try again later.' } }))
@@ -46,7 +47,9 @@ export function createRoomEntryRouter(database: Pool) {
     const guestId = await findGuest(database, request)
     if (!guestId) { response.status(401).json({ message: 'Start a guest session before joining.' }); return }
     const input: z.infer<typeof joinRoomSchema> = response.locals.input
-    response.json(await joinRoom(database, response.locals.code, guestId, input.nickname, input.invitationToken))
+    const membership = await joinRoom(database, response.locals.code, guestId, input.nickname, input.invitationToken)
+    roomChanged?.(membership.roomId, 'joined')
+    response.json(membership)
   })
   return router
 }

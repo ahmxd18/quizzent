@@ -9,8 +9,11 @@ export function guestCookieSettings() {
   const production = process.env.NODE_ENV === 'production'
   return { name: production ? '__Host-quizzent_guest' : 'quizzent_guest', options: { httpOnly: true, secure: production, sameSite: 'lax' as const, path: '/' } }
 }
-export async function findGuest(database: Pool, request: Request): Promise<string | null> {
-  const token: unknown = request.cookies?.[guestCookieSettings().name]
+export function findGuest(database: Pool, request: Request) {
+  return findGuestByToken(database, request.cookies?.[guestCookieSettings().name])
+}
+
+export async function findGuestByToken(database: Pool, token: unknown): Promise<string | null> {
   if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null
   const { rows } = await database.query<{ guest_id: string }>('SELECT guest_id FROM guest_sessions WHERE token_hash = $1 AND expires_at > now()', [hashSecret(token)])
   return rows[0]?.guest_id ?? null

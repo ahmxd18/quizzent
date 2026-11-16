@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       // Browser requests to /api go to Express during local development.
       '/api': 'http://127.0.0.1:3001',
+      '/socket.io': { target: 'http://127.0.0.1:3001', ws: true },
     },
   },
 })

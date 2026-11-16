@@ -7,8 +7,9 @@ import { errorHandler } from './middleware/error-handler.js'
 import { createCompetitionRouter } from './features/competitions/competition.routes.js'
 import { createRoomRouter } from './features/rooms/room.routes.js'
 import { createGuestRouter, createRoomEntryRouter } from './features/rooms/guest.routes.js'
+import type { RoomChanged } from './features/lobby/lobby.server.js'
 
-export function createApp(database: Pool) {
+export function createApp(database: Pool, roomChanged?: RoomChanged) {
   const app = express()
   app.disable('x-powered-by')
   app.use(cookieParser())
@@ -21,9 +22,9 @@ export function createApp(database: Pool) {
   app.use('/api/auth', createSignupRouter(database))
   app.use('/api/auth', createSessionRouter(database))
   app.use('/api/competitions', createCompetitionRouter(database))
-  app.use('/api/rooms', createRoomRouter(database))
+  app.use('/api/rooms', createRoomRouter(database, roomChanged))
   app.use('/api/guest', createGuestRouter(database))
-  app.use('/api/room-entry', createRoomEntryRouter(database))
+  app.use('/api/room-entry', createRoomEntryRouter(database, roomChanged))
   app.use((_request, response) => {
     response.status(404).json({ message: 'Route not found' })
   })
