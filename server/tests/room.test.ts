@@ -20,6 +20,12 @@ import { joinRoom } from '../src/features/rooms/admission.service.js'
 
 type Snapshot = { onlineCount: number; readyCount: number; ready?: boolean; participants?: { participantId: string; ready: boolean }[] }
 
+async function lobbySnapshot(event: Promise<Snapshot & { serverNow?: number }>) {
+  const { serverNow, ...snapshot } = await event
+  assert.equal(typeof serverNow, 'number')
+  return snapshot
+}
+
 function waitFor<T>(socket: Socket, event: string, matches: (value: T) => boolean = () => true) {
   return new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -58,7 +64,8 @@ test('rooms and guest admission', async context => {
     const ownerCookie = `quizzent_session=${await createSession(pool, owner.id)}`
     const otherCookie = `quizzent_session=${await createSession(pool, other.id)}`
     const reconnectGrace = 500
-    runtime = createQuizzentServer(pool, reconnectGrace)
+    const warningMs = 750
+    runtime = createQuizzentServer(pool, reconnectGrace, warningMs)
     const server = runtime.server.listen(0, '127.0.0.1')
     await once(server, 'listening')
     const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
@@ -87,6 +94,8 @@ test('rooms and guest admission', async context => {
       assert.equal((await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open' }, '')).status, 401)
       assert.equal((await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open' }, otherCookie)).status, 404)
       assert.equal((await send('/rooms', 'POST', { competitionId: unpublished.id, admissionMode: 'open' })).status, 409)
+      assert.equal((await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open', lobbySeconds: -1 })).status, 400)
+      assert.equal((await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open', minReady: 51 })).status, 400)
       assert.equal((await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open', organiserId: other.id })).status, 400)
       assert.equal((await fetch(`${base}/rooms`, { method: 'POST', headers: { Cookie: ownerCookie } })).status, 403)
     })
@@ -281,7 +290,7 @@ test('rooms and guest admission', async context => {
         const host = openSocket('organiser', ownerCookie)
         const hostInitial = waitFor<Snapshot>(host, 'lobby:state')
         host.connect()
-        assert.deepEqual(await hostInitial, { onlineCount: 0, readyCount: 0, participants: [] })
+        assert.deepEqual(await lobbySnapshot(hostInitial), { onlineCount: 0, readyCount: 0, participants: [] })
         assert.equal((await host.timeout(2_000).emitWithAck('lobby:ready', true)).ok, false)
 
         const joined = waitFor(host, 'lobby:room-changed')
@@ -293,15 +302,15 @@ test('rooms and guest admission', async context => {
         const first = openSocket('guest', guestCookie)
         const initial = waitFor<Snapshot>(first, 'lobby:state')
         first.connect()
-        assert.deepEqual(await initial, { onlineCount: 1, readyCount: 0, ready: false })
+        assert.deepEqual(await lobbySnapshot(initial), { onlineCount: 1, readyCount: 0, ready: false })
         const ready = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 1)
         assert.equal((await first.timeout(2_000).emitWithAck('lobby:ready', true)).ok, true)
-        assert.deepEqual(await ready, { onlineCount: 1, readyCount: 1, participants: [{ participantId, ready: true }] })
+        assert.deepEqual(await lobbySnapshot(ready), { onlineCount: 1, readyCount: 1, participants: [{ participantId, ready: true }] })
 
         const second = openSocket('guest', guestCookie)
         const secondInitial = waitFor<Snapshot>(second, 'lobby:state')
         second.connect()
-        assert.deepEqual(await secondInitial, { onlineCount: 1, readyCount: 1, ready: true })
+        assert.deepEqual(await lobbySnapshot(secondInitial), { onlineCount: 1, readyCount: 1, ready: true })
         const stillReady = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 1)
         first.disconnect()
         assert.equal((await stillReady).onlineCount, 1)
@@ -320,7 +329,7 @@ test('rooms and guest admission', async context => {
         await delay(reconnectGrace + 50)
         const reset = waitFor<Snapshot>(second, 'lobby:state')
         second.connect()
-        assert.deepEqual(await reset, { onlineCount: 1, readyCount: 0, ready: false })
+        assert.deepEqual(await lobbySnapshot(reset), { onlineCount: 1, readyCount: 0, ready: false })
         const readyAgain = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 1)
         assert.equal((await second.timeout(2_000).emitWithAck('lobby:ready', true)).ok, true)
         await readyAgain
@@ -337,6 +346,100 @@ test('rooms and guest admission', async context => {
         assert.equal((await first.timeout(2_000).emitWithAck('lobby:ready', true)).ok, false)
         const history = await send(`/guest/rooms/${liveRoom.id}`, 'GET', undefined, guestCookie)
         assert.equal((await history.json()).room.status, 'closed')
+      } finally {
+        for (const socket of sockets) socket.disconnect()
+      }
+    })
+    await context.test('starts once, restarts an interrupted warning, and locks only live ready guests into the roster', async () => {
+      const opened = await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open', lobbySeconds: 2, minReady: 2 })
+      assert.equal(opened.status, 201)
+      const { room: live } = await opened.json()
+      const sockets: Socket[] = []
+
+      async function connect(role: 'organiser' | 'guest', cookie: string) {
+        const socket = io(origin, {
+          auth: { role, roomId: live.id }, extraHeaders: { Cookie: cookie, Origin: origin },
+          transports: ['websocket'], autoConnect: false, reconnection: false,
+        })
+        sockets.push(socket)
+        const connected = waitFor(socket, 'lobby:state')
+        socket.connect()
+        await connected
+        return socket
+      }
+      async function join(nickname: string) {
+        const cookie = await guest()
+        const response = await send(`/room-entry/${live.code}/join`, 'POST', { nickname }, cookie)
+        assert.equal(response.status, 200)
+        return { cookie, ...(await response.json() as { participantId: string }) }
+      }
+      async function read() {
+        const response = await send(`/rooms/${live.id}`)
+        assert.equal(response.status, 200)
+        return response.json() as Promise<{
+          room: { lobbyEndsAt: string; warningEndsAt: string | null; startedAt: string | null }
+          participants: { id: string; admitted: boolean }[]
+        }>
+      }
+      async function until(predicate: (details: Awaited<ReturnType<typeof read>>) => boolean) {
+        const timeout = Date.now() + 5_000
+        do {
+          const current = await read()
+          if (predicate(current)) return current
+          await delay(25)
+        } while (Date.now() < timeout)
+        assert.fail('Timed out waiting for a room start transition.')
+      }
+
+      try {
+        const host = await connect('organiser', ownerCookie)
+        const [one, two, observer] = await Promise.all([join('Ready One'), join('Ready Two'), join('Observer')])
+        const [first, second] = await Promise.all([connect('guest', one.cookie), connect('guest', two.cookie), connect('guest', observer.cookie)])
+        const results = await Promise.all([first, second].map(socket => socket.timeout(2_000).emitWithAck('lobby:ready', true)))
+        assert.ok(results.every(result => result.ok))
+        const before = (await read()).room
+        assert.ok(Date.now() < Date.parse(before.lobbyEndsAt))
+        assert.equal(before.warningEndsAt, null)
+        assert.equal(before.startedAt, null)
+
+        // Hold the same lock as room admission while the ready count dips and recovers.
+        const initial = (await until(details => !!details.room.warningEndsAt)).room
+        const originalEnd = Date.parse(initial.warningEndsAt!)
+        assert.ok(originalEnd - warningMs >= Date.parse(initial.lobbyEndsAt))
+        const client = await pool!.connect()
+        try {
+          await client.query('BEGIN')
+          await client.query('SELECT id FROM rooms WHERE id = $1 FOR UPDATE', [live.id])
+          const dropped = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 1)
+          second.disconnect()
+          await dropped
+          const recovered = waitFor<Snapshot>(host, 'lobby:state', state => state.readyCount === 2)
+          second.connect()
+          await recovered
+          await delay(Math.max(0, originalEnd - Date.now()) + 20)
+          const blocked = (await read()).room
+          assert.equal(blocked.startedAt, null)
+        } finally {
+          await client.query('ROLLBACK')
+          client.release()
+        }
+
+        const restarted = (await until(details => !!details.room.warningEndsAt && Date.parse(details.room.warningEndsAt) > originalEnd)).room
+        assert.ok(Date.parse(restarted.warningEndsAt!) - warningMs > originalEnd)
+        const final = await until(details => !!details.room.startedAt)
+        assert.equal(final.room.warningEndsAt, null)
+        assert.ok(Date.parse(final.room.startedAt!) >= Date.parse(restarted.warningEndsAt!))
+        assert.deepEqual(new Set(final.participants.filter(p => p.admitted).map(p => p.id)), new Set([one.participantId, two.participantId]))
+
+        assert.equal((await send(`/room-entry/${live.code}/join`, 'POST', { nickname: 'Late Guest' }, await guest())).status, 409)
+        assert.equal((await send(`/rooms/${live.id}/invitations`, 'POST', { reference: 'Too Late' })).status, 409)
+        assert.equal((await first.timeout(2_000).emitWithAck('lobby:ready', false)).ok, false)
+        assert.equal((await read()).room.startedAt, final.room.startedAt)
+        const ownStatus = async (cookie: string) => (await (await send(`/guest/rooms/${live.id}`, 'GET', undefined, cookie)).json()).participant.admitted
+        assert.equal(await ownStatus(one.cookie), true)
+        assert.equal(await ownStatus(observer.cookie), false)
+        assert.equal((await send(`/rooms/${live.id}/close`, 'POST', {})).status, 200)
+        assert.equal((await read()).room.startedAt, final.room.startedAt)
       } finally {
         for (const socket of sockets) socket.disconnect()
       }
