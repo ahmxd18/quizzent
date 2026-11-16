@@ -2,13 +2,13 @@ import { randomBytes } from 'node:crypto'
 import { DatabaseError, type Pool } from 'pg'
 import { inTransaction } from '../../lib/transaction.js'
 import { hashSecret } from '../../lib/secrets.js'
-import { lockOwnedRoom } from './room.service.js'
+import { lockOwnedLobby } from './room.service.js'
 import { RoomError } from './room.error.js'
 
 export async function createInvitation(database: Pool, ownerId: string, roomId: string, reference: string) {
   try {
     return await inTransaction(database, async client => {
-      await lockOwnedRoom(client, roomId, ownerId)
+      await lockOwnedLobby(client, roomId, ownerId)
       const { rows: [count] } = await client.query('SELECT count(*)::integer AS total FROM room_invitations WHERE room_id = $1', [roomId])
       if (count.total >= 50) throw new RoomError(409, 'A room can have up to 50 personal invitations.')
       const token = randomBytes(32).toString('hex')
@@ -22,7 +22,7 @@ export async function createInvitation(database: Pool, ownerId: string, roomId: 
 }
 export async function renewInvitation(database: Pool, ownerId: string, roomId: string, invitationId: string) {
   return inTransaction(database, async client => {
-    await lockOwnedRoom(client, roomId, ownerId)
+    await lockOwnedLobby(client, roomId, ownerId)
     const { rows: [invitation] } = await client.query('SELECT i.id, i.reference, p.id AS participant_id FROM room_invitations i LEFT JOIN room_participants p ON p.invitation_id = i.id WHERE i.id = $1 AND i.room_id = $2', [invitationId, roomId])
     if (!invitation) throw new RoomError(404, 'Invitation not found.')
     if (invitation.participant_id) throw new RoomError(409, 'This invitation has already been used. Its participant identity cannot be reassigned.')

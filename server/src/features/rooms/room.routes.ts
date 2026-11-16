@@ -21,7 +21,7 @@ export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   router.post('/', validateBody(createRoomSchema), async (_request, response) => {
     const user: SessionUser = response.locals.user
     const input: z.infer<typeof createRoomSchema> = response.locals.input
-    response.status(201).json({ room: await createRoom(database, user.id, input.competitionId, input.admissionMode) })
+    response.status(201).json({ room: await createRoom(database, user.id, input.competitionId, input.admissionMode, input) })
   })
   router.get('/:id', async (request, response) => {
     const user: SessionUser = response.locals.user
