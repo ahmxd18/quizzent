@@ -113,9 +113,9 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Restore the same attempt and reconcile missed deadlines without resetting time.
     Check: exact deadline, answer versus timeout, offline expiry, and lost updates.
 
-14. [ ] Final results and organiser progress
+14. [x] Final results and organiser progress
     Rank by correct answers descending, then total answer time ascending.
-    Proposed: share ranks for exact ties and release correctness after completion.
+    Share ranks for exact ties and release each guest's answer review after everyone finishes.
     Recalculate final results from saved resolutions before publishing them.
     Add a simple organiser progress view and final competitor leaderboard.
     Check: ties, unanswered questions, simultaneous finishes, and private data visibility.
@@ -153,6 +153,6 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–12 were merged through PRs #1–#9. Step 13 stores a server deadline for
-each question, advances expired attempts, and restores saved progress on reconnect.
-Next: results, ranking, and organiser progress (step 14).
+Steps 01–13 were merged through PRs #1–#10. Step 14 shows organiser progress
+and publishes the final leaderboard once all admitted guests finish.
+Next: cancellation and server outage handling (step 15).

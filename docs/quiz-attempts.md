@@ -28,4 +28,4 @@ An answer starts the next question's timer when the server accepts it. A timeout
 
 A background task advances expired attempts. A refresh or a submission also checks for missed deadlines before returning. If the task runs late, it uses the original deadlines to catch up. A timeout is stored as an unanswered question with its resolution time set to the deadline.
 
-Run `npm run db:migrate` after pulling Step 13. Migration `0008` gives any current question in an existing open attempt a fresh window. Previously saved answers keep their original submission times and have no recorded question window. Ranking arrives in Step 14.
+Migration `0008` gives any current question in an existing open attempt a fresh window. Previously saved answers keep their original submission times and have no recorded question window. See how those older answers are handled in [quiz results and organiser progress](quiz-results.md).

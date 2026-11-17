@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-Organisers can sign up, publish MCQ competitions, and host one room at a time. Guests join by code or invitation and mark themselves ready. After the automatic start, admitted guests get a saved question order and answer one timed question at a time. Expired questions advance automatically, including when a guest is offline. Read the [quiz attempts guide](docs/quiz-attempts.md).
+Organisers can publish MCQ competitions, host a room, and see guest progress. Admitted guests answer one timed question at a time. When everyone finishes, Quizzent publishes the leaderboard and each guest can review their own answers. [Quiz results guide](docs/quiz-results.md)
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
