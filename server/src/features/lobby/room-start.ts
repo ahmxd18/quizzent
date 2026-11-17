@@ -86,6 +86,7 @@ export function createRoomStart(
           'SELECT assign_quiz_attempts($1) AS assigned', [roomId],
         )
         if (attempts.assigned !== ids.length) throw new Error('Could not assign questions to the starting roster.')
+        await client.query('SELECT start_quiz_timers($1)', [roomId])
         return { changed: true, terminal: true }
       })
 
