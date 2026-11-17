@@ -24,7 +24,7 @@ export function useSubmitAnswer(roomId: string) {
     async onSuccess(saved) {
       await client.cancelQueries({ queryKey })
       // A second tab may have moved the attempt ahead while this response was in flight.
-      client.setQueryData<Attempt>(queryKey, current => current && current.answered > saved.answered ? current : saved)
+      client.setQueryData<Attempt>(queryKey, current => current && current.answered + current.timedOut > saved.answered + saved.timedOut ? current : saved)
     },
     async onError(error) {
       if (error instanceof ApiError && [401, 403, 409].includes(error.status)) {
