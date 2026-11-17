@@ -6,6 +6,7 @@ export type Room = {
   admissionMode: AdmissionMode; status: 'open' | 'closed'; participantCount: number
   createdAt: string; closedAt: string | null
   minReady: number; lobbyEndsAt: string; warningEndsAt: string | null; startedAt: string | null
+  resultsPublishedAt: string | null
 }
 export type Participant = { id: string; nickname: string; participantNumber: number; organiserReference: string | null; joinedAt: string; admitted: boolean }
 export type Invitation = { id: string; reference: string; participantId: string | null; createdAt: string }

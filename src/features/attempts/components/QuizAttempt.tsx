@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { RequestError } from '../../../components/ui/RequestError'
+import { GuestResults } from '../../results/components/GuestResults'
 import type { Attempt } from '../api/attempts'
 import { useAttempt } from '../hooks/useAttempt'
 import { useQuestionCountdown } from '../hooks/useQuestionCountdown'
@@ -51,12 +52,13 @@ export function QuizAttempt({ roomId }: { roomId: string }) {
     </section>
   )
   if (!attempt) return <p role="status" className="mt-6 text-sm text-muted">Loading your question…</p>
-  if (attempt.phase === 'complete') return (
+  if (attempt.phase === 'complete') return (<>
     <section className="mt-6 space-y-2 rounded-xl border border-outline bg-surface-strong p-5" aria-live="polite">
       <h2 className="font-display text-2xl">Quiz complete</h2>
       <p className="text-sm text-muted">{attempt.answered} of {attempt.total} answers saved{attempt.timedOut > 0 ? ` · ${attempt.timedOut} timed out` : ''}.</p>
     </section>
-  )
+    <GuestResults roomId={roomId} />
+  </>)
 
   return (
     <TimedQuestion
