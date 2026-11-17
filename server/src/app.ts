@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/error-handler.js'
 import { createCompetitionRouter } from './features/competitions/competition.routes.js'
 import { createRoomRouter } from './features/rooms/room.routes.js'
 import { createGuestRouter, createRoomEntryRouter } from './features/rooms/guest.routes.js'
+import { createAttemptRouter } from './features/attempts/attempt.routes.js'
 import type { RoomChanged } from './features/lobby/lobby.server.js'
 
 export function createApp(database: Pool, roomChanged?: RoomChanged) {
@@ -23,6 +24,7 @@ export function createApp(database: Pool, roomChanged?: RoomChanged) {
   app.use('/api/auth', createSessionRouter(database))
   app.use('/api/competitions', createCompetitionRouter(database))
   app.use('/api/rooms', createRoomRouter(database, roomChanged))
+  app.use('/api/guest/rooms', createAttemptRouter(database))
   app.use('/api/guest', createGuestRouter(database))
   app.use('/api/room-entry', createRoomEntryRouter(database, roomChanged))
   app.use((_request, response) => {

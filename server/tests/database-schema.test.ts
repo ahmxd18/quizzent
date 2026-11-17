@@ -12,7 +12,7 @@ test('account and session migration', async (context) => {
   const schema = `quizzent_test_${randomUUID().replaceAll('-', '')}`
   await client.connect()
   let schemaCreated = false
-  const migrationCount = 6
+  const migrationCount = 7
 
   const migrate = (direction: 'up' | 'down') => runner({
     dbClient: client,

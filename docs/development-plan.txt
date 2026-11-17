@@ -97,7 +97,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Close late admission and show the committed state to all clients.
     Check: threshold races, disconnect during warning, repeated start triggers.
 
-12. [ ] Assigned questions and immutable answer submission
+12. [x] Assigned questions and immutable answer submission
     Persist an independent question/option permutation for every admitted guest.
     Return only the current question; keep keys and other submissions private.
     Save one answer and advance in one transaction (an all-or-nothing database change).
@@ -154,7 +154,7 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–10 were merged through PRs #1–#7. Step 11 saves the lobby timer,
-five-second warning, and starting roster. Only online ready guests make the
-roster. Room codes and invitations stop admitting new guests after the start.
-Next: assign questions and accept one answer per question (step 12).
+Steps 01–11 were merged through PRs #1–#8. Step 12 saves shuffled question and
+option orders for the starting roster, shows one question at a time, and accepts
+one answer per question with safe retries.
+Next: server deadlines, automatic timeouts, and reconnecting mid-question (step 13).
