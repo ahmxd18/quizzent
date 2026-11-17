@@ -17,6 +17,22 @@ import { saveQuestion } from '../src/features/questions/question.service.js'
 import { createGuestSession } from '../src/features/rooms/guest-session.service.js'
 import { hashSecret } from '../src/lib/secrets.js'
 import { joinRoom } from '../src/features/rooms/admission.service.js'
+import { missedQuestionCount } from '../src/features/attempts/attempt-clock.js'
+
+test('the exact deadline expires the question and later windows keep their original boundaries', () => {
+  const deadline = new Date(10_000)
+  assert.equal(missedQuestionCount(deadline, new Date(9_999), 10_000, 3), 0)
+  assert.equal(missedQuestionCount(deadline, deadline, 10_000, 3), 1)
+  assert.equal(missedQuestionCount(deadline, new Date(19_999), 10_000, 3), 1)
+  assert.equal(missedQuestionCount(deadline, new Date(20_000), 10_000, 3), 2)
+  assert.equal(missedQuestionCount(deadline, new Date(100_000), 10_000, 3), 3)
+})
+
+function savedView<T extends { serverNow?: string }>(view: T) {
+  const { serverNow, ...saved } = view
+  if (serverNow) assert.ok(Number.isFinite(Date.parse(serverNow)))
+  return saved
+}
 
 type Snapshot = { onlineCount: number; readyCount: number; ready?: boolean; participants?: { participantId: string; ready: boolean }[] }
 
@@ -461,12 +477,13 @@ test('rooms and guest admission', async context => {
             assert.equal(response.status, 200)
             assert.equal(response.headers.get('Cache-Control'), 'no-store')
             const attempt = await response.json()
-            assert.deepEqual(Object.keys(attempt).sort(), ['answered', 'phase', 'question', 'total'])
+            assert.deepEqual(Object.keys(attempt).sort(), ['answered', 'deadlineAt', 'issuedAt', 'phase', 'question', 'serverNow', 'timedOut', 'total'])
+            assert.equal(Date.parse(attempt.deadlineAt) - Date.parse(attempt.issuedAt), 10_000)
             assert.deepEqual(Object.keys(attempt.question).sort(), ['id', 'options', 'prompt'])
             assert.ok(attempt.question.options.every((option: object) => Object.keys(option).sort().join() === 'id,text'))
             assert.equal(attempt.question.id, order[0].question_id)
             assert.deepEqual(attempt.question.options.map((option: { id: string }) => option.id), order[0].option_order)
-            assert.deepEqual(await (await send(attemptPath, 'GET', undefined, member.cookie)).json(), attempt)
+            assert.deepEqual(savedView(await (await send(attemptPath, 'GET', undefined, member.cookie)).json()), savedView(attempt))
           }
           const { rows: [repeated] } = await pool!.query('SELECT assign_quiz_attempts($1) AS assigned', [live.id])
           assert.equal(repeated.assigned, 0)
@@ -494,25 +511,81 @@ test('rooms and guest admission', async context => {
           const current = await responses.find(response => response.ok)!.json()
           assert.equal(current.question.id, future.question_id)
           assert.equal(current.answered, 1)
-          assert.deepEqual(await (await save(winner)).json(), current)
-          assert.deepEqual(await (await send(attemptPath, 'GET', undefined, one.cookie)).json(), current)
+          assert.deepEqual(savedView(await (await save(winner)).json()), savedView(current))
+          assert.deepEqual(savedView(await (await send(attemptPath, 'GET', undefined, one.cookie)).json()), savedView(current))
           assert.equal((await save({ ...winner, questionId: future.question_id, optionId: future.option_order[0] })).status, 409)
 
           const second = { questionId: current.question.id, optionId: current.question.options[0].id, requestId: randomUUID() }
           const retries = await Promise.all([save(second), save(second)])
           assert.deepEqual(retries.map(response => response.status), [200, 200])
           const last = await retries[0].json()
-          assert.deepEqual(await retries[1].json(), last)
+          assert.deepEqual(savedView(await retries[1].json()), savedView(last))
           assert.equal(last.answered, 2)
           const finished = await save({ questionId: last.question.id, optionId: last.question.options[0].id, requestId: randomUUID() })
-          assert.deepEqual(await finished.json(), { phase: 'complete', answered: 3, total: 3 })
-          assert.deepEqual(await (await save(winner)).json(), { phase: 'complete', answered: 3, total: 3 })
+          assert.deepEqual(await finished.json(), { phase: 'complete', answered: 3, timedOut: 0, total: 3 })
+          assert.deepEqual(await (await save(winner)).json(), { phase: 'complete', answered: 3, timedOut: 0, total: 3 })
           assert.equal((await (await send(attemptPath, 'GET', undefined, two.cookie)).json()).answered, 0)
           const { rows: saved } = await pool!.query(
             'SELECT option_id, request_id FROM quiz_answers WHERE participant_id = $1', [one.participantId],
           )
           assert.equal(saved.length, 3)
           assert.equal(saved.find(row => row.request_id === winner.requestId)?.option_id, winner.optionId)
+        })
+        await startTest.test('reconciles offline timeouts and rejects a late answer during refresh', async () => {
+          const initial = await (await send(attemptPath, 'GET', undefined, two.cookie)).json()
+          const { rows: [stamp] } = await pool!.query<{ issued_at: Date }>(
+            `UPDATE quiz_attempts
+             SET issued_at = date_trunc('milliseconds', now()) - interval '21 seconds',
+                 deadline_at = date_trunc('milliseconds', now()) - interval '11 seconds'
+             WHERE participant_id = $1 RETURNING issued_at`, [two.participantId],
+          )
+          async function savedAnswers() {
+            const result = await pool!.query(
+              'SELECT option_id, request_id, issued_at, deadline_at, submitted_at FROM quiz_answers WHERE participant_id = $1 ORDER BY submitted_at',
+              [two.participantId],
+            )
+            return result.rows
+          }
+
+          // No browser requests while the background worker resolves both missed questions.
+          const stop = Date.now() + 2_500
+          while ((await savedAnswers()).length < 2 && Date.now() < stop) await delay(35)
+          const missed = await savedAnswers()
+          assert.equal(missed.length, 2)
+          for (const [index, row] of missed.entries()) {
+            assert.equal(row.option_id, null)
+            assert.equal(row.request_id, null)
+            assert.equal(row.issued_at.getTime(), stamp.issued_at.getTime() + index * 10_000)
+            assert.equal(row.deadline_at.getTime() - row.issued_at.getTime(), 10_000)
+            assert.deepEqual(row.submitted_at, row.deadline_at)
+          }
+
+          const late = { questionId: initial.question.id, optionId: initial.question.options[0].id, requestId: randomUUID() }
+          const [refresh, submission] = await Promise.all([
+            send(attemptPath, 'GET', undefined, two.cookie),
+            send(`${attemptPath}/answers`, 'POST', late, two.cookie),
+          ])
+          assert.equal(submission.status, 409)
+          const resumed = await refresh.json()
+          assert.equal(resumed.answered, 0)
+          assert.equal(resumed.timedOut, 2)
+          assert.equal(Date.parse(resumed.issuedAt), stamp.issued_at.getTime() + 20_000)
+          assert.equal(Date.parse(resumed.deadlineAt), stamp.issued_at.getTime() + 30_000)
+          assert.deepEqual(savedView(await (await send(attemptPath, 'GET', undefined, two.cookie)).json()), savedView(resumed))
+
+          // Put the last deadline in the past and race a submission with automatic advancement.
+          await pool!.query(
+            "UPDATE quiz_attempts SET issued_at = now() - interval '11 seconds', deadline_at = now() - interval '1 second' WHERE participant_id = $1",
+            [two.participantId],
+          )
+          const answer = { questionId: resumed.question.id, optionId: resumed.question.options[0].id, requestId: randomUUID() }
+          const conflict = await send(`${attemptPath}/answers`, 'POST', answer, two.cookie)
+          assert.equal(conflict.status, 409)
+          assert.equal((await savedAnswers()).length, 3)
+          assert.deepEqual(await (await send(attemptPath, 'GET', undefined, two.cookie)).json(), {
+            phase: 'complete', answered: 0, timedOut: 3, total: 3,
+          })
+          assert.equal((await savedAnswers()).filter(row => row.request_id === null).length, 3)
         })
         assert.equal((await send(`/rooms/${live.id}/close`, 'POST', {})).status, 200)
         assert.equal((await send(attemptPath, 'GET', undefined, one.cookie)).status, 409)

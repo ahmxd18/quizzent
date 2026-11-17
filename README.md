@@ -4,7 +4,7 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-Organisers can sign up, publish MCQ competitions, and host one room at a time. Guests join by room code or personal invitation and mark themselves ready. After the automatic start, each admitted guest gets a saved question and option order and answers one question at a time. Read the [quiz attempts guide](docs/quiz-attempts.md).
+Organisers can sign up, publish MCQ competitions, and host one room at a time. Guests join by code or invitation and mark themselves ready. After the automatic start, admitted guests get a saved question order and answer one timed question at a time. Expired questions advance automatically, including when a guest is offline. Read the [quiz attempts guide](docs/quiz-attempts.md).
 
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 

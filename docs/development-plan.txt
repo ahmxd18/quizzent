@@ -106,11 +106,10 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Check: conflicting answers, sequence bypass, retries, and refresh after submission.
     Split assignment, submission engine, and question UI into separate commits.
 
-13. [ ] Authoritative timing, timeout progression, and reconnection
+13. [x] Authoritative timing, timeout progression, and reconnection
     Use the same organiser-configured limit for each question, default 10 seconds.
     Save server issue times and deadlines; browser timers are display only.
-    Proposed: individual disconnections do not pause timers; timeouts receive full time.
-    Confirm these defaults when implementing them.
+    Individual disconnections do not pause timers. Timeouts use the full question limit.
     Restore the same attempt and reconcile missed deadlines without resetting time.
     Check: exact deadline, answer versus timeout, offline expiry, and lost updates.
 
@@ -154,7 +153,6 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–11 were merged through PRs #1–#8. Step 12 saves shuffled question and
-option orders for the starting roster, shows one question at a time, and accepts
-one answer per question with safe retries.
-Next: server deadlines, automatic timeouts, and reconnecting mid-question (step 13).
+Steps 01–12 were merged through PRs #1–#9. Step 13 stores a server deadline for
+each question, advances expired attempts, and restores saved progress on reconnect.
+Next: results, ranking, and organiser progress (step 14).
