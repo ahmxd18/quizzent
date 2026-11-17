@@ -1,6 +1,7 @@
 import type { Pool } from 'pg'
 import { RoomError } from '../rooms/room.error.js'
 import { expireAttempt } from './attempt.service.js'
+import { publishFinishedRooms } from '../results/publish-results.js'
 
 export function startTimeoutWorker(database: Pool) {
   let stopped = false
@@ -21,12 +22,13 @@ export function startTimeoutWorker(database: Pool) {
         if (!(error instanceof RoomError)) throw error
       }
     }
+    if (!stopped) await publishFinishedRooms(database)
   }
 
   const timer = setInterval(() => {
     if (pending) return
     pending = sweep()
-      .catch(() => { console.error('Could not reconcile expired quiz attempts.') })
+      .catch(() => { console.error('Could not update timed attempts or final results.') })
       .finally(() => { pending = undefined })
   }, 500).unref()
 

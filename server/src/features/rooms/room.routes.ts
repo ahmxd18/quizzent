@@ -8,6 +8,7 @@ import { closeRoom, createRoom, getOwnedRoom, listRooms } from './room.service.j
 import { createInvitation, renewInvitation } from './invitation.service.js'
 import { emptyBody, jsonWrites, noStore, validateBody, validateId } from './room.http.js'
 import type { RoomChanged } from '../lobby/lobby.server.js'
+import { readOrganiserProgress } from '../results/results.service.js'
 
 export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   const router = express.Router()
@@ -26,6 +27,10 @@ export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   router.get('/:id', async (request, response) => {
     const user: SessionUser = response.locals.user
     response.json(await getOwnedRoom(database, user.id, request.params.id))
+  })
+  router.get('/:id/progress', async (request, response) => {
+    const user: SessionUser = response.locals.user
+    response.json(await readOrganiserProgress(database, request.params.id, user.id))
   })
   router.post('/:id/close', emptyBody, async (request, response) => {
     const user: SessionUser = response.locals.user
