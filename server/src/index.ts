@@ -9,22 +9,27 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 
 // Bind locally while we develop. Deployment settings will come later.
 const database = createDatabasePool()
-const { server, close } = createQuizzentServer(database)
-server.listen(port, '127.0.0.1', () => {
-  console.log(`Quizzent API listening at http://127.0.0.1:${port}`)
-})
+const { start, close } = createQuizzentServer(database)
 
 // Stop accepting requests before releasing the shared database connections.
-let stopping = false
+let stopping: Promise<void> | undefined
 function shutdown() {
-  if (stopping) return
-  stopping = true
-  void close().finally(() => database.end())
+  return stopping ??= close().finally(() => database.end())
 }
-process.once('SIGINT', shutdown)
-process.once('SIGTERM', shutdown)
-server.on('error', () => {
-  console.error('The API could not start. Check whether its port is already in use.')
+process.once('SIGINT', () => { void shutdown() })
+process.once('SIGTERM', () => { void shutdown() })
+
+try {
+  const cancelled = await start(port)
+  if (!stopping) {
+    if (cancelled > 0) console.log(`Cancelled ${cancelled} interrupted competition(s).`)
+    console.log(`Quizzent API listening at http://127.0.0.1:${port}`)
+  }
+} catch (error) {
+  const code = (error as NodeJS.ErrnoException).code
+  console.error(code === 'EADDRINUSE'
+    ? 'The API port is already in use.'
+    : 'The API could not recover rooms. Check PostgreSQL and run npm run db:migrate.')
   process.exitCode = 1
-  shutdown()
-})
+  await shutdown()
+}

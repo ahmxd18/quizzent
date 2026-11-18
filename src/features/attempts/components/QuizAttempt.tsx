@@ -7,11 +7,12 @@ import { useAttempt } from '../hooks/useAttempt'
 import { useQuestionCountdown } from '../hooks/useQuestionCountdown'
 import { QuestionForm } from './QuestionForm'
 
-function TimedQuestion({ attempt, roomId, busy, paused, refresh }: {
+function TimedQuestion({ attempt, roomId, busy, paused, disconnected, refresh }: {
   attempt: Extract<Attempt, { phase: 'question' }>
   roomId: string
   busy: boolean
   paused: boolean
+  disconnected: boolean
   refresh: () => void
 }) {
   const seconds = useQuestionCountdown(attempt)
@@ -34,12 +35,12 @@ function TimedQuestion({ attempt, roomId, busy, paused, refresh }: {
         </span>
       </div>
       {expired && <p role="status" className="text-sm text-muted">{paused ? 'Time’s up. Waiting for a connection to resume.' : 'Time’s up. Checking your progress…'}</p>}
-      <QuestionForm roomId={roomId} question={attempt.question} position={position} expired={expired} />
+      <QuestionForm roomId={roomId} question={attempt.question} position={position} expired={expired} disconnected={disconnected} />
     </section>
   )
 }
 
-export function QuizAttempt({ roomId }: { roomId: string }) {
+export function QuizAttempt({ roomId, disconnected }: { roomId: string; disconnected: boolean }) {
   const query = useAttempt(roomId)
   const attempt = query.data
 
@@ -67,6 +68,7 @@ export function QuizAttempt({ roomId }: { roomId: string }) {
       roomId={roomId}
       busy={query.isFetching}
       paused={query.isPaused}
+      disconnected={disconnected}
       refresh={() => { void query.refetch() }}
     />
   )

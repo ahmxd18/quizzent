@@ -19,6 +19,7 @@ export function useSubmitAnswer(roomId: string) {
 
   return useMutation({
     mutationFn: (answer: AnswerSubmission) => postAnswer(roomId, answer),
+    networkMode: 'always',
     retry: false,
     gcTime: 0,
     async onSuccess(saved) {

@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
-import { once } from 'node:events'
 import type { AddressInfo } from 'node:net'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
@@ -84,9 +83,9 @@ test('rooms and guest admission', async context => {
     const reconnectGrace = 500
     const warningMs = 750
     runtime = createQuizzentServer(pool, reconnectGrace, warningMs)
-    const server = runtime.server.listen(0, '127.0.0.1')
-    await once(server, 'listening')
-    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    assert.equal(await runtime.start(0), 0)
+    const port = (runtime.server.address() as AddressInfo).port
+    const origin = `http://127.0.0.1:${port}`
     const base = `${origin}/api`
     const send = (path: string, method = 'GET', body?: unknown, cookie = ownerCookie) => fetch(`${base}${path}`, {
       method, headers: { Cookie: cookie, 'Content-Type': 'application/json', 'X-Quizzent-Request': '1' },
@@ -674,21 +673,91 @@ test('rooms and guest admission', async context => {
         [row.rank, row.nickname, row.totalTimeMs]), [[1, 'Aster', 1200], [1, 'Birch', 1200], [3, 'Clover', 1800], [4, 'Dahlia', 150], [5, 'Elm', null]])
       assert.equal(result.standings.length, 7)
       assert.deepEqual(await (await send(standingsPath)).json(), result)
+      assert.equal((await send(`/rooms/${ranked.id}/cancel`, 'POST', { reason: 'Too late' })).status, 409)
+      assert.deepEqual(await (await send(standingsPath)).json(), result)
+    })
+
+    async function startFixture(nickname: string) {
       const next = await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open', lobbySeconds: 0 })
       assert.equal(next.status, 201)
       const { room: interrupted } = await next.json()
       const interruptedCookie = await guest()
-      const admitted = await send(`/room-entry/${interrupted.code}/join`, 'POST', { nickname: 'Still Playing' }, interruptedCookie)
+      const admitted = await send(`/room-entry/${interrupted.code}/join`, 'POST', { nickname }, interruptedCookie)
       assert.equal(admitted.status, 200)
       const { participantId } = await admitted.json()
       await pool!.query('UPDATE room_participants SET admitted = true WHERE id = $1', [participantId])
       await pool!.query('UPDATE rooms SET started_at = lobby_ends_at WHERE id = $1', [interrupted.id])
       await pool!.query('SELECT assign_quiz_attempts($1)', [interrupted.id])
       await pool!.query('SELECT start_quiz_timers($1)', [interrupted.id])
-      assert.equal((await send(`/rooms/${interrupted.id}/close`, 'POST', {})).status, 200)
+      return { interrupted, interruptedCookie, participantId }
+    }
+
+    await context.test('requires an organiser reason, then serialises cancellation with a submitted answer', async () => {
+      const { interrupted, interruptedCookie, participantId } = await startFixture('Still Playing')
+      const cancelPath = `/rooms/${interrupted.id}/cancel`
+      assert.equal((await send(`/rooms/${interrupted.id}/close`, 'POST', {})).status, 409)
+      assert.equal((await send(cancelPath, 'POST', { reason: '   ' })).status, 400)
+      assert.equal((await send(cancelPath, 'POST', { reason: 'Rescheduled' }, otherCookie)).status, 404)
+      assert.equal((await send(cancelPath, 'POST', { reason: 'Rescheduled' }, interruptedCookie)).status, 401)
+      const path = `/guest/rooms/${interrupted.id}/attempt`
+      const { question } = await (await send(path, 'GET', undefined, interruptedCookie)).json()
+      const answer = { questionId: question.id, optionId: question.options[0].id, requestId: randomUUID() }
+      const [cancel, submission] = await Promise.all([
+        send(cancelPath, 'POST', { reason: '  Rescheduled for Friday.  ' }),
+        send(`${path}/answers`, 'POST', answer, interruptedCookie),
+      ])
+      assert.equal(cancel.status, 200)
+      assert.ok([200, 409].includes(submission.status))
+      assert.equal((await pool!.query('SELECT 1 FROM quiz_answers WHERE participant_id = $1', [participantId])).rowCount, submission.ok ? 1 : 0)
+      assert.equal((await send(`${path}/answers`, 'POST', answer, interruptedCookie)).status, 409)
+      assert.equal((await send(path, 'GET', undefined, interruptedCookie)).status, 409)
+      const { room: cancelled } = await (await send(`/guest/rooms/${interrupted.id}`, 'GET', undefined, interruptedCookie)).json()
+      assert.equal(cancelled.cancellationReason, 'organiser')
+      assert.equal(cancelled.cancellationNote, 'Rescheduled for Friday.')
+      const preview = await (await send(`/room-entry/${interrupted.code}`, 'GET', undefined, '')).json()
+      assert.equal(preview.room.cancellationReason, 'organiser')
+      assert.equal(preview.room.cancellationNote, null)
       const noResults = await send(`/guest/rooms/${interrupted.id}/results`, 'GET', undefined, interruptedCookie)
-      assert.deepEqual(await noResults.json(), { phase: 'closed' })
+      assert.deepEqual(await noResults.json(), { phase: 'cancelled' })
       assert.equal((await pool!.query('SELECT 1 FROM quiz_results WHERE participant_id = $1', [participantId])).rowCount, 0)
+    })
+
+    await context.test('recovers running competitions before serving HTTP and preserves the lobby and published results', async () => {
+      const { interrupted, interruptedCookie, participantId } = await startFixture('Offline on Restart')
+      const pending = await createCompetition(pool!, other.id, { title: 'Waiting room', description: '', questionTimeSeconds: 10 })
+      await saveQuestion(pool!, other.id, pending.id, { prompt: 'Choose A', options: ['A', 'B', 'C', 'D'], correctOptionIndex: 0 })
+      await publishCompetition(pool!, other.id, pending.id)
+      const open = await send('/rooms', 'POST', { competitionId: pending.id, admissionMode: 'open' }, otherCookie)
+      assert.equal(open.status, 201)
+      const { room: lobby } = await open.json()
+      const standings = await pool!.query('SELECT * FROM quiz_results ORDER BY participant_id')
+      assert.ok(standings.rows.length > 0)
+
+      const duplicate = createQuizzentServer(pool!)
+      try {
+        await assert.rejects(duplicate.start(port), { code: 'EADDRINUSE' })
+      } finally { await duplicate.close() }
+      const before = await (await send(`/rooms/${interrupted.id}`)).json()
+      assert.equal(before.room.status, 'open')
+
+      await runtime!.close()
+      await pool!.query(
+        "UPDATE quiz_attempts SET issued_at = now() - interval '40 seconds', deadline_at = now() - interval '30 seconds' WHERE participant_id = $1",
+        [participantId],
+      )
+      runtime = createQuizzentServer(pool!, reconnectGrace, warningMs)
+      assert.equal(await runtime.start(port), 1)
+      const recovered = await (await send(`/guest/rooms/${interrupted.id}`, 'GET', undefined, interruptedCookie)).json()
+      assert.equal(recovered.room.cancellationReason, 'server_outage')
+      assert.equal(recovered.room.resultsPublishedAt, null)
+      assert.equal((await send(`/guest/rooms/${interrupted.id}/attempt`, 'GET', undefined, interruptedCookie)).status, 409)
+      assert.deepEqual(await (await send(`/guest/rooms/${interrupted.id}/results`, 'GET', undefined, interruptedCookie)).json(), { phase: 'cancelled' })
+      const waiting = await (await send(`/rooms/${lobby.id}`, 'GET', undefined, otherCookie)).json()
+      assert.equal(waiting.room.status, 'open')
+      assert.equal(waiting.room.cancellationReason, null)
+      await delay(650)
+      assert.equal((await pool!.query('SELECT 1 FROM quiz_answers WHERE participant_id = $1', [participantId])).rowCount, 0)
+      assert.deepEqual((await pool!.query('SELECT * FROM quiz_results ORDER BY participant_id')).rows, standings.rows)
     })
   } finally {
     await runtime?.close()

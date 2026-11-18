@@ -7,17 +7,21 @@ export type Room = {
   createdAt: string; closedAt: string | null
   minReady: number; lobbyEndsAt: string; warningEndsAt: string | null; startedAt: string | null
   resultsPublishedAt: string | null
+  cancellationReason: 'organiser' | 'server_outage' | null
+  cancellationNote: string | null
 }
 export type Participant = { id: string; nickname: string; participantNumber: number; organiserReference: string | null; joinedAt: string; admitted: boolean }
 export type Invitation = { id: string; reference: string; participantId: string | null; createdAt: string }
 export type RoomDetails = { room: Room; participants: Participant[]; invitations: Invitation[] }
 export type InvitationLink = { invitation: { id: string; reference: string }; token: string }
 const roomPath = (id: string) => `/api/rooms/${encodeURIComponent(id)}`
+export const roomRequestTimeout = 3500
 
 export const listRooms = () => getJson<{ rooms: Room[] }>('/api/rooms')
-export const getRoom = (id: string) => getJson<RoomDetails>(roomPath(id))
+export const getRoom = (id: string) => getJson<RoomDetails>(roomPath(id), roomRequestTimeout)
 export const createRoom = (input: { competitionId: string; admissionMode: AdmissionMode; lobbySeconds: number; minReady: number }) => postJson<{ room: Room }>('/api/rooms', input)
 export const closeRoom = (id: string) => postJson<{ message: string }>(`${roomPath(id)}/close`, {})
+export const cancelRoom = (id: string, reason: string) => postJson<{ message: string }>(`${roomPath(id)}/cancel`, { reason })
 export const createInvitation = (roomId: string, reference: string) => postJson<InvitationLink>(`${roomPath(roomId)}/invitations`, { reference })
 export const renewInvitation = (roomId: string, invitationId: string) => postJson<InvitationLink>(`${roomPath(roomId)}/invitations/${encodeURIComponent(invitationId)}/link`, {})
 export const roomJoinLink = (room: Room) => `${window.location.origin}/join/${room.code}`

@@ -23,8 +23,8 @@ export async function postJson<T>(path: string, body: unknown): Promise<T> {
   return requestJson<T>('post', path, body)
 }
 
-export async function getJson<T>(path: string): Promise<T> {
-  return requestJson<T>('get', path)
+export async function getJson<T>(path: string, timeout?: number): Promise<T> {
+  return requestJson<T>('get', path, undefined, timeout)
 }
 
 export async function putJson<T>(path: string, body: unknown): Promise<T> {
@@ -35,10 +35,10 @@ export async function deleteJson<T>(path: string): Promise<T> {
   return requestJson<T>('delete', path)
 }
 
-async function requestJson<T>(method: 'get' | 'post' | 'put' | 'delete', path: string, body?: unknown): Promise<T> {
+async function requestJson<T>(method: 'get' | 'post' | 'put' | 'delete', path: string, body?: unknown, timeout?: number): Promise<T> {
   try {
     // Axios serialises the object and parses the JSON response for us.
-    const response = await client.request<T>({ method, url: path, data: body })
+    const response = await client.request<T>({ method, url: path, data: body, timeout })
     if (response.data === null || response.data === undefined) {
       throw new Error('The server returned an unreadable response.')
     }

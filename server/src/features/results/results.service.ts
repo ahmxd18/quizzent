@@ -1,7 +1,7 @@
 import type { Pool } from 'pg'
 import { RoomError } from '../rooms/room.error.js'
 
-type RoomState = { status: 'open' | 'closed'; started_at: Date | null; results_published_at: Date | null }
+type RoomState = { status: 'open' | 'closed'; started_at: Date | null; results_published_at: Date | null; cancellation_reason: string | null }
 
 async function readStandings(database: Pool, roomId: string) {
   const { rows } = await database.query(
@@ -18,9 +18,10 @@ async function readStandings(database: Pool, roomId: string) {
 
 export async function readOrganiserProgress(database: Pool, roomId: string, ownerId: string) {
   const { rows: [room] } = await database.query<RoomState>(
-    'SELECT status, started_at, results_published_at FROM rooms WHERE id = $1 AND organiser_id = $2', [roomId, ownerId],
+    'SELECT status, started_at, results_published_at, cancellation_reason FROM rooms WHERE id = $1 AND organiser_id = $2', [roomId, ownerId],
   )
   if (!room) throw new RoomError(404, 'Room not found.')
+  if (room.cancellation_reason) return { phase: 'cancelled' }
   if (room.results_published_at) {
     return { phase: 'final', publishedAt: room.results_published_at, standings: await readStandings(database, roomId) }
   }
@@ -37,12 +38,13 @@ export async function readOrganiserProgress(database: Pool, roomId: string, owne
 
 export async function readGuestResults(database: Pool, roomId: string, guestId: string) {
   const { rows: [member] } = await database.query<RoomState & { id: string; admitted: boolean; participant_number: number }>(
-    `SELECT p.id, p.admitted, p.participant_number, r.status, r.started_at, r.results_published_at
+    `SELECT p.id, p.admitted, p.participant_number, r.status, r.started_at, r.results_published_at, r.cancellation_reason
      FROM room_participants p JOIN rooms r ON r.id = p.room_id WHERE r.id = $1 AND p.guest_id = $2`,
     [roomId, guestId],
   )
   if (!member) throw new RoomError(404, 'You have not joined this room in this browser.')
   if (!member.admitted) throw new RoomError(403, 'You were not admitted to this competition.')
+  if (member.cancellation_reason) return { phase: 'cancelled' }
   if (!member.results_published_at) return { phase: member.status === 'closed' ? 'closed' : 'waiting' }
 
   const standings = await readStandings(database, roomId)

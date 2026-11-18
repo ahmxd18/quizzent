@@ -6,6 +6,8 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 Organisers can publish MCQ competitions, host a room, and see guest progress. Admitted guests answer one timed question at a time. When everyone finishes, Quizzent publishes the leaderboard and each guest can review their own answers. [Quiz results guide](docs/quiz-results.md)
 
+Organisers can cancel a running quiz with a reason. The server also cancels interrupted quizzes when it restarts. [Cancellation and recovery guide](docs/competition-cancellation.md)
+
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
 The frontend was scaffolded with `npm create vite@latest . -- --template react-ts --no-interactive`. Dependency versions are recorded in `package-lock.json`.

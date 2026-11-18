@@ -59,7 +59,10 @@ export async function createRoom(database: Pool, ownerId: string, competitionId:
 export async function closeRoom(database: Pool, ownerId: string, roomId: string) {
   await inTransaction(database, async client => {
     const room = await lockOwnedRoom(client, roomId, ownerId)
-    if (room.started_at && await publishRoomResults(client, roomId)) return
+    if (room.started_at) {
+      if (await publishRoomResults(client, roomId)) return
+      throw new RoomError(409, 'Cancel this competition to end it before everyone finishes.')
+    }
     await client.query("UPDATE rooms SET status = 'closed', closed_at = clock_timestamp(), warning_ends_at = NULL WHERE id = $1", [roomId])
   })
 }

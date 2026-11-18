@@ -120,7 +120,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Add a simple organiser progress view and final competitor leaderboard.
     Check: ties, unanswered questions, simultaneous finishes, and private data visibility.
 
-15. [ ] Cancellation and server outage handling
+15. [x] Cancellation and server outage handling
     Add explicit cancellation with a reason and a clear cancelled screen.
     On server restart, cancel affected active competitions rather than resuming them.
     During loss of contact, show a connection warning; confirm cancellation on recovery.
@@ -153,6 +153,6 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–13 were merged through PRs #1–#10. Step 14 shows organiser progress
-and publishes the final leaderboard once all admitted guests finish.
-Next: cancellation and server outage handling (step 15).
+Steps 01–14 were merged through PRs #1–#11. Step 15 records cancellations and
+checks for interrupted running competitions before the server resumes work.
+Next: minimal superadmin controls (step 16).

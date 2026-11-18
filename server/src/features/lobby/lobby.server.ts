@@ -18,7 +18,7 @@ type SocketData = { access: LobbyAccess }
 
 const channel = (roomId: string) => `lobby:${roomId}`
 
-export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs = 8_000, warningMs = 5_000) {
+export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs = 8_000, warningMs = 5_000, isReady = () => true) {
   const presence = new LobbyPresence(reconnectGraceMs)
   const io = new Server<ClientEvents, ServerEvents, Record<never, never>, SocketData>(server, {
     transports: ['websocket'],
@@ -29,7 +29,7 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
       const scheme = process.env.NODE_ENV === 'production' ? 'https' : 'http'
       const { host, origin } = request.headers
       // Browsers send Origin on WebSocket upgrades. Only the Quizzent site may use these cookies.
-      accept(null, !!host && origin === `${scheme}://${host}`)
+      accept(null, isReady() && !!host && origin === `${scheme}://${host}`)
     },
   })
   let stopping = false

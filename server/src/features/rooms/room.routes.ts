@@ -3,12 +3,13 @@ import type { Pool } from 'pg'
 import { z } from 'zod'
 import { requireSameOriginRequest, requireSession } from '../auth/session.http.js'
 import type { SessionUser } from '../auth/session.service.js'
-import { createRoomSchema, invitationSchema } from './room.schema.js'
+import { cancelRoomSchema, createRoomSchema, invitationSchema } from './room.schema.js'
 import { closeRoom, createRoom, getOwnedRoom, listRooms } from './room.service.js'
 import { createInvitation, renewInvitation } from './invitation.service.js'
 import { emptyBody, jsonWrites, noStore, validateBody, validateId } from './room.http.js'
 import type { RoomChanged } from '../lobby/lobby.server.js'
 import { readOrganiserProgress } from '../results/results.service.js'
+import { cancelRoom } from './cancellation.service.js'
 
 export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   const router = express.Router()
@@ -38,6 +39,13 @@ export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
     await closeRoom(database, user.id, roomId)
     roomChanged?.(roomId, 'closed')
     response.json({ message: 'Room closed.' })
+  })
+  router.post('/:id/cancel', validateBody(cancelRoomSchema), async (request, response) => {
+    const user: SessionUser = response.locals.user
+    const roomId = String(request.params.id)
+    await cancelRoom(database, user.id, roomId, response.locals.input.reason)
+    roomChanged?.(roomId, 'closed')
+    response.json({ message: 'Competition cancelled.' })
   })
   router.post('/:id/invitations', validateBody(invitationSchema), async (request, response) => {
     const user: SessionUser = response.locals.user

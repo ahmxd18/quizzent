@@ -16,7 +16,7 @@ export function GuestResults({ roomId, roomPublished = false }: { roomId: string
     </div>
   )
   if (result?.phase !== 'final') {
-    const message = result?.phase === 'closed'
+    const message = result?.phase === 'cancelled' ? 'Competition cancelled.' : result?.phase === 'closed'
       ? 'The organiser closed the room before results were published.'
       : result?.phase === 'waiting' ? 'Waiting for the other guests to finish.' : 'Checking for results…'
     return <p role="status" className="mt-5 text-sm text-muted">{message}</p>
