@@ -6,6 +6,7 @@ import { databaseNow, moveAttempt, reconcileTimeouts, type AttemptProgress } fro
 type Membership = {
   participant_id: string; admitted: boolean; started_at: Date | null
   status: 'open' | 'closed'; question_time_seconds: number
+  results_published_at: Date | null
 }
 type Question = { id: string; prompt: string; options: { id: string; text: string }[] }
 export type AnswerInput = { questionId: string; optionId: string; requestId: string }
@@ -13,12 +14,12 @@ export type AnswerInput = { questionId: string; optionId: string; requestId: str
 async function lockAttempt(client: PoolClient, roomId: string, guestId: string) {
   // Guests can answer in parallel. Room closure waits for in-flight attempts.
   const { rows: [member] } = await client.query<Membership>(
-    `SELECT p.id AS participant_id, p.admitted, r.started_at, r.status, c.question_time_seconds
+    `SELECT p.id AS participant_id, p.admitted, r.started_at, r.status, c.question_time_seconds, r.results_published_at
      FROM room_participants p JOIN rooms r ON r.id = p.room_id JOIN competitions c ON c.id = r.competition_id
      WHERE r.id = $1 AND p.guest_id = $2 FOR SHARE OF r`, [roomId, guestId],
   )
   if (!member) throw new RoomError(404, 'You have not joined this room in this browser.')
-  if (member.status === 'closed') throw new RoomError(409, 'This room is closed.')
+  if (member.status === 'closed' && !member.results_published_at) throw new RoomError(409, 'This room is closed.')
   if (!member.started_at) throw new RoomError(409, 'This competition has not started.')
   if (!member.admitted) throw new RoomError(403, 'You were not admitted to this competition.')
 

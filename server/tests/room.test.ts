@@ -395,7 +395,7 @@ test('rooms and guest admission', async context => {
         const response = await send(`/rooms/${live.id}`)
         assert.equal(response.status, 200)
         return response.json() as Promise<{
-          room: { lobbyEndsAt: string; warningEndsAt: string | null; startedAt: string | null }
+          room: { lobbyEndsAt: string; warningEndsAt: string | null; startedAt: string | null; resultsPublishedAt: string | null; status: string }
           participants: { id: string; admitted: boolean }[]
         }>
       }
@@ -413,6 +413,8 @@ test('rooms and guest admission', async context => {
         const host = await connect('organiser', ownerCookie)
         const [one, two, observer] = await Promise.all([join('Ready One'), join('Ready Two'), join('Observer')])
         const attemptPath = `/guest/rooms/${live.id}/attempt`
+        const resultsPath = `/guest/rooms/${live.id}/results`
+        const progressPath = `/rooms/${live.id}/progress`
         assert.equal((await send(attemptPath, 'GET', undefined, one.cookie)).status, 409)
         const [first, second] = await Promise.all([connect('guest', one.cookie), connect('guest', two.cookie), connect('guest', observer.cookie)])
         const results = await Promise.all([first, second].map(socket => socket.timeout(2_000).emitWithAck('lobby:ready', true)))
@@ -530,6 +532,13 @@ test('rooms and guest admission', async context => {
           )
           assert.equal(saved.length, 3)
           assert.equal(saved.find(row => row.request_id === winner.requestId)?.option_id, winner.optionId)
+          assert.deepEqual(await (await send(resultsPath, 'GET', undefined, one.cookie)).json(), { phase: 'waiting' })
+          assert.equal((await send(progressPath, 'GET', undefined, one.cookie)).status, 401)
+          assert.equal((await send(progressPath, 'GET', undefined, otherCookie)).status, 404)
+          const progress = await (await send(progressPath)).json()
+          assert.equal(progress.phase, 'running')
+          assert.deepEqual(progress.participants.map((entry: { resolved: number }) => entry.resolved).sort(), [0, 3])
+          assert.deepEqual(Object.keys(progress.participants[0]).sort(), ['participantId', 'resolved', 'timedOut', 'total'])
         })
         await startTest.test('reconciles offline timeouts and rejects a late answer during refresh', async () => {
           const initial = await (await send(attemptPath, 'GET', undefined, two.cookie)).json()
@@ -587,12 +596,99 @@ test('rooms and guest admission', async context => {
           })
           assert.equal((await savedAnswers()).filter(row => row.request_id === null).length, 3)
         })
-        assert.equal((await send(`/rooms/${live.id}/close`, 'POST', {})).status, 200)
-        assert.equal((await send(attemptPath, 'GET', undefined, one.cookie)).status, 409)
+        const published = await until(details => !!details.room.resultsPublishedAt)
+        assert.equal(published.room.status, 'closed')
+        assert.equal((await send(attemptPath, 'GET', undefined, one.cookie)).status, 200)
+        assert.equal((await send(resultsPath, 'GET', undefined, observer.cookie)).status, 403)
+        assert.equal((await send(resultsPath, 'GET', undefined, await guest())).status, 404)
+        const guestResult = await send(resultsPath, 'GET', undefined, two.cookie)
+        assert.equal(guestResult.headers.get('Cache-Control'), 'no-store')
+        const finalResults = await guestResult.json()
+        assert.equal(finalResults.phase, 'final')
+        assert.equal(finalResults.review.length, 3)
+        assert.ok(finalResults.review.every((row: { outcome: string; selectedOption: string | null }) => row.outcome === 'timeout' && row.selectedOption === null))
+        assert.equal(finalResults.standings.find((row: { participantNumber: number }) => row.participantNumber === finalResults.participantNumber).totalTimeMs, 30_000)
+        assert.deepEqual(Object.keys(finalResults.standings[0]).sort(), ['correct', 'nickname', 'participantNumber', 'rank', 'total', 'totalTimeMs'])
+        assert.deepEqual((await (await send(progressPath)).json()).standings, finalResults.standings)
         assert.equal((await read()).room.startedAt, final.room.startedAt)
       } finally {
         for (const socket of sockets) socket.disconnect()
       }
+    })
+    await context.test('archives one leaderboard with shared ranks and stable ordering after simultaneous finishes', async () => {
+      const hosted = await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open' })
+      assert.equal(hosted.status, 201)
+      const { room: ranked } = await hosted.json()
+      const members = []
+      for (const nickname of ['Aster', 'Birch', 'Clover', 'Dahlia', 'Elm', 'Fir', 'Ginger']) {
+        const cookie = await guest()
+        const joined = await send(`/room-entry/${ranked.code}/join`, 'POST', { nickname }, cookie)
+        assert.equal(joined.status, 200)
+        const { participantId } = await joined.json()
+        members.push({ participantId, cookie })
+      }
+      await pool!.query('UPDATE room_participants SET admitted = true WHERE room_id = $1', [ranked.id])
+      await pool!.query('UPDATE rooms SET started_at = lobby_ends_at WHERE id = $1', [ranked.id])
+      await pool!.query('SELECT assign_quiz_attempts($1)', [ranked.id])
+      await pool!.query('SELECT start_quiz_timers($1)', [ranked.id])
+      const [a, b, c, d, e, ...last] = members
+      for (const [member, score, cost] of [[a, 3, 400], [b, 3, 400], [c, 3, 600], [d, 2, 50], [e, 2, null]] as const) {
+        await pool!.query(
+          `WITH stamp AS (SELECT now() - interval '2 seconds' AS issued)
+           INSERT INTO quiz_answers (participant_id, question_id, option_id, request_id, submitted_at, issued_at, deadline_at)
+           SELECT aq.participant_id, aq.question_id, CASE WHEN aq.position <= $2 THEN q.correct_option_id ELSE wrong.id END,
+             gen_random_uuid(), stamp.issued + coalesce($3::integer, 1) * interval '1 millisecond',
+             CASE WHEN $3::integer IS NOT NULL THEN stamp.issued END,
+             CASE WHEN $3::integer IS NOT NULL THEN stamp.issued + interval '10 seconds' END
+           FROM stamp, quiz_attempt_questions aq JOIN questions q ON q.id = aq.question_id
+           JOIN LATERAL (SELECT id FROM question_options WHERE question_id = q.id AND id <> q.correct_option_id LIMIT 1) wrong ON true
+           WHERE aq.participant_id = $1`, [member.participantId, score, cost],
+        )
+        await pool!.query('UPDATE quiz_attempts SET next_position = total_questions + 1, issued_at = NULL, deadline_at = NULL WHERE participant_id = $1', [member.participantId])
+      }
+      const path = `/guest/rooms/${ranked.id}/attempt`
+      async function answerCurrent(member: typeof a) {
+        const current = await (await send(path, 'GET', undefined, member.cookie)).json()
+        assert.equal(current.phase, 'question')
+        const { rows: [wrong] } = await pool!.query(
+          'SELECT o.id FROM question_options o JOIN questions q ON q.id = o.question_id WHERE q.id = $1 AND o.id <> q.correct_option_id LIMIT 1',
+          [current.question.id],
+        )
+        const result = await send(`${path}/answers`, 'POST', { questionId: current.question.id, optionId: wrong.id, requestId: randomUUID() }, member.cookie)
+        assert.equal(result.status, 200)
+        return result.json()
+      }
+      for (let index = 0; index < 3; index++) {
+        const views = await Promise.all(last.map(answerCurrent))
+        assert.ok(views.every(view => view.phase === (index === 2 ? 'complete' : 'question')))
+      }
+      const standingsPath = `/rooms/${ranked.id}/progress`
+      let result = await (await send(standingsPath)).json()
+      const stop = Date.now() + 2_500
+      while (result.phase !== 'final' && Date.now() < stop) {
+        await delay(30)
+        result = await (await send(standingsPath)).json()
+      }
+      assert.equal(result.phase, 'final')
+      assert.deepEqual(result.standings.slice(0, 5).map((row: { rank: number; nickname: string; totalTimeMs: number | null }) =>
+        [row.rank, row.nickname, row.totalTimeMs]), [[1, 'Aster', 1200], [1, 'Birch', 1200], [3, 'Clover', 1800], [4, 'Dahlia', 150], [5, 'Elm', null]])
+      assert.equal(result.standings.length, 7)
+      assert.deepEqual(await (await send(standingsPath)).json(), result)
+      const next = await send('/rooms', 'POST', { competitionId: draft.id, admissionMode: 'open', lobbySeconds: 0 })
+      assert.equal(next.status, 201)
+      const { room: interrupted } = await next.json()
+      const interruptedCookie = await guest()
+      const admitted = await send(`/room-entry/${interrupted.code}/join`, 'POST', { nickname: 'Still Playing' }, interruptedCookie)
+      assert.equal(admitted.status, 200)
+      const { participantId } = await admitted.json()
+      await pool!.query('UPDATE room_participants SET admitted = true WHERE id = $1', [participantId])
+      await pool!.query('UPDATE rooms SET started_at = lobby_ends_at WHERE id = $1', [interrupted.id])
+      await pool!.query('SELECT assign_quiz_attempts($1)', [interrupted.id])
+      await pool!.query('SELECT start_quiz_timers($1)', [interrupted.id])
+      assert.equal((await send(`/rooms/${interrupted.id}/close`, 'POST', {})).status, 200)
+      const noResults = await send(`/guest/rooms/${interrupted.id}/results`, 'GET', undefined, interruptedCookie)
+      assert.deepEqual(await noResults.json(), { phase: 'closed' })
+      assert.equal((await pool!.query('SELECT 1 FROM quiz_results WHERE participant_id = $1', [participantId])).rowCount, 0)
     })
   } finally {
     await runtime?.close()

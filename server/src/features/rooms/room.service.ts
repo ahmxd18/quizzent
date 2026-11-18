@@ -3,6 +3,7 @@ import { DatabaseError, type Pool, type PoolClient } from 'pg'
 import { inTransaction } from '../../lib/transaction.js'
 import { RoomError } from './room.error.js'
 import { roomColumns, type Room } from './room.queries.js'
+import { publishRoomResults } from '../results/publish-results.js'
 
 const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -57,7 +58,8 @@ export async function createRoom(database: Pool, ownerId: string, competitionId:
 }
 export async function closeRoom(database: Pool, ownerId: string, roomId: string) {
   await inTransaction(database, async client => {
-    await lockOwnedRoom(client, roomId, ownerId)
+    const room = await lockOwnedRoom(client, roomId, ownerId)
+    if (room.started_at && await publishRoomResults(client, roomId)) return
     await client.query("UPDATE rooms SET status = 'closed', closed_at = clock_timestamp(), warning_ends_at = NULL WHERE id = $1", [roomId])
   })
 }
