@@ -7,6 +7,9 @@ export const createRoomSchema = z.strictObject({
   minReady: z.number().int().min(1).max(50).default(2),
 })
 const isPlainText = (value: string) => !/\p{Cc}/u.test(value)
+export const cancelRoomSchema = z.strictObject({
+  reason: z.string().trim().min(1, 'Enter a reason for cancelling.').max(200, 'Use at most 200 characters.').refine(isPlainText, 'Use plain text for the reason.'),
+})
 export const invitationSchema = z.strictObject({ reference: z.string().trim().min(1, 'Enter an organiser reference.').max(100, 'Use 100 characters or fewer.').refine(isPlainText, 'Use plain text for the reference.') })
 export const joinRoomSchema = z.strictObject({
   nickname: z.string().transform(value => value.normalize('NFKC').trim().replace(/\s+/gu, ' ')).pipe(z.string().min(1, 'Choose a nickname.').max(32, 'Use 32 characters or fewer.').refine(isPlainText, 'Use plain text for the nickname.')),

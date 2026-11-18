@@ -10,13 +10,17 @@ export async function previewRoom(database: Pool, code: string, guestId: string 
   if (!room) throw new RoomError(404, 'Room not found. Check the code with your organiser.')
   const { rows: names } = await database.query<{ nickname: string }>('SELECT nickname FROM room_participants WHERE room_id = $1', [room.id])
   const { rows: existing } = guestId ? await database.query<{ id: string; nickname: string }>('SELECT id, nickname FROM room_participants WHERE room_id = $1 AND guest_id = $2', [room.id, guestId]) : { rows: [] }
-  return { room, suggestedNickname: existing[0]?.nickname ?? suggestNickname(names.map(row => row.nickname)), participantId: existing[0]?.id ?? null }
+  return {
+    room: { ...room, cancellationNote: existing[0] ? room.cancellationNote : null },
+    suggestedNickname: existing[0]?.nickname ?? suggestNickname(names.map(row => row.nickname)),
+    participantId: existing[0]?.id ?? null,
+  }
 }
 export async function joinRoom(database: Pool, code: string, guestId: string, nickname: string, invitationToken?: string) {
   try {
     return await inTransaction(database, async client => {
       // Admissions and closing share this lock; count, invitation claim, and insert are atomic.
-      const { rows: [room] } = await client.query('SELECT id, status, admission_mode, started_at FROM rooms WHERE code = $1 FOR UPDATE', [code])
+      const { rows: [room] } = await client.query('SELECT id, status, admission_mode, started_at, cancellation_reason FROM rooms WHERE code = $1 FOR UPDATE', [code])
       if (!room) throw new RoomError(404, 'Room not found.')
       const { rows: [invitation] } = invitationToken ? await client.query('SELECT id FROM room_invitations WHERE room_id = $1 AND token_hash = $2', [room.id, hashSecret(invitationToken)]) : { rows: [] }
       if (invitationToken && !invitation) throw new RoomError(403, 'This invitation is invalid or has been replaced. Ask your organiser for a new link.')
@@ -25,6 +29,7 @@ export async function joinRoom(database: Pool, code: string, guestId: string, ni
         if (invitation && invitation.id !== existing.invitation_id) throw new RoomError(409, 'This browser has already joined this room as another participant.')
         return { roomId: room.id, participantId: existing.id }
       }
+      if (room.cancellation_reason) throw new RoomError(409, 'This competition was cancelled.')
       if (room.status !== 'open') throw new RoomError(409, 'This room is closed to new guests.')
       if (room.started_at) throw new RoomError(409, 'This competition has already started.')
       if (room.admission_mode === 'invitation' && !invitation) throw new RoomError(403, 'This room requires your personal invitation link.')
