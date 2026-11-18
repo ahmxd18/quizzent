@@ -14,6 +14,6 @@ Some answers saved before Step 13 have no question window. Those attempts show *
 
 - The organiser can see progress while guests answer and the final leaderboard afterward.
 - Admitted guests can see the final leaderboard and review their own answers after publication.
-- Other guests’ choices and the organiser’s invitation references are kept private. An early close leaves the room record available without a final leaderboard.
+- Other guests’ choices and the organiser’s invitation references are kept private. A cancellation leaves the room record available without a final leaderboard.
 
 Run `npm run db:migrate` after pulling this change. Migration `0009` adds the published results table and publication time.
