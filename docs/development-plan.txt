@@ -126,7 +126,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     During loss of contact, show a connection warning; confirm cancellation on recovery.
     Check: restart mid-competition, cancellation versus answer, no invalid final results.
 
-16. [ ] Minimal superadmin controls
+16. [x] Minimal superadmin controls
     Provision superadmin separately; do not expose privileged public signup.
     Add user/organiser inspection, suspension, role assignment, and room cancellation.
     Record privileged actions; do not add arbitrary score editing.
@@ -153,6 +153,6 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–14 were merged through PRs #1–#11. Step 15 records cancellations and
-checks for interrupted running competitions before the server resumes work.
-Next: minimal superadmin controls (step 16).
+Steps 01–15 were merged through PRs #1–#12. Step 16 adds one-time superadmin
+setup, account and room controls, session revocation, and an audit trail.
+Next: MVP hardening (step 17), then deployment and portfolio documentation (step 18).
