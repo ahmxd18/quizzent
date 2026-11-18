@@ -1,16 +1,22 @@
-import type { Pool } from 'pg'
+import type { Pool, PoolClient } from 'pg'
 import { inTransaction } from '../../lib/transaction.js'
 import { lockOwnedRoom } from './room.service.js'
+import { RoomError } from './room.error.js'
+
+export async function writeRoomCancellation(client: PoolClient, roomId: string, source: 'organiser' | 'superadmin', reason: string) {
+  // The row lock orders this write against answers and result publication.
+  const updated = await client.query(
+    `UPDATE rooms SET status = 'closed', closed_at = clock_timestamp(), warning_ends_at = NULL,
+      cancellation_reason = $2, cancellation_note = $3 WHERE id = $1 AND status = 'open'`,
+    [roomId, source, reason],
+  )
+  if (!updated.rowCount) throw new RoomError(409, 'This room is closed.')
+}
 
 export async function cancelRoom(database: Pool, ownerId: string, roomId: string, reason: string) {
   await inTransaction(database, async client => {
-    // Answers and publication use the same room lock. Whichever commits first decides the outcome.
     await lockOwnedRoom(client, roomId, ownerId)
-    await client.query(
-      `UPDATE rooms SET status = 'closed', closed_at = clock_timestamp(), warning_ends_at = NULL,
-        cancellation_reason = 'organiser', cancellation_note = $2 WHERE id = $1`,
-      [roomId, reason],
-    )
+    await writeRoomCancellation(client, roomId, 'organiser', reason)
   })
 }
 
