@@ -12,7 +12,7 @@ export function useGuestResults(roomId: string, roomPublished: boolean) {
   })
   const phase = query.data?.phase
   useEffect(() => {
-    if (!roomPublished && (phase === 'final' || phase === 'closed')) {
+    if (!roomPublished && (phase === 'final' || phase === 'closed' || phase === 'cancelled')) {
       void client.invalidateQueries({ queryKey: ['guest', 'room', roomId] })
     }
   }, [client, phase, roomId, roomPublished])
@@ -29,7 +29,7 @@ export function useOrganiserProgress(roomId: string, roomPublished: boolean) {
   })
   const phase = query.data?.phase
   useEffect(() => {
-    if (!roomPublished && phase === 'final') {
+    if (!roomPublished && (phase === 'final' || phase === 'cancelled')) {
       void client.invalidateQueries({ queryKey: ['rooms', 'detail', roomId] })
       void client.invalidateQueries({ queryKey: ['rooms', 'list'] })
     }

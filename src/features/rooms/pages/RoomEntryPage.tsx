@@ -25,7 +25,8 @@ export function RoomEntryPage() {
   else if (preview.participantId && (invitationToken === undefined || admissionClosed)) return <Navigate to={`/rooms/${preview.room.id}`} replace />
   else if (admissionClosed || invalidLink || needsInvitation) {
     let title = 'A personal invitation is needed.'
-    if (admissionClosed) title = preview.room.status === 'closed' ? 'This room is closed.' : 'This competition has already started.'
+    if (preview.room.cancellationReason) title = 'This competition was cancelled.'
+    else if (admissionClosed) title = preview.room.status === 'closed' ? 'This room is closed.' : 'This competition has already started.'
     else if (invalidLink) title = 'This invitation link is invalid.'
     content = <Card className="p-8">
       <h1 className="font-display text-3xl">{title}</h1>
