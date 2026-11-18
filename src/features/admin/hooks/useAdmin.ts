@@ -21,10 +21,11 @@ export function useAdminOverview(userId: string, search: string) {
   return query
 }
 
-export function useAdminAction() {
+export function useAdminAction(takePassword: () => string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { action: AdminAction; reason: string }) => submitAdminAction(input.action, input.reason),
+    mutationFn: (input: { action: AdminAction; reason: string; restricted: boolean; weeklyLimit: number | null }) =>
+      submitAdminAction(input.action, { ...input, password: takePassword() }),
     retry: false,
     gcTime: 0,
     networkMode: 'always',

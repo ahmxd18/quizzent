@@ -26,6 +26,7 @@ function AdminDashboard({ userId }: { userId: string }) {
     <div>
       <ButtonLink to="/organiser" variant="ghost" size="sm">← Organiser space</ButtonLink>
       <h1 className="mt-4 font-display text-4xl tracking-tight sm:text-5xl">Superadmin</h1>
+      <ButtonLink to="/admin/directory" variant="secondary" className="mt-4">View competitions and rooms</ButtonLink>
     </div>
     <form onSubmit={filter} className="flex flex-wrap items-end gap-3">
       <TextField label="Search accounts and rooms" name="search" type="search" maxLength={100}
