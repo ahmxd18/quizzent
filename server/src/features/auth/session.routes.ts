@@ -31,7 +31,11 @@ export function createSessionRouter(database: Pool) {
       response.status(401).json({ message: 'Email or password is incorrect.' })
       return
     }
-    const token = await createSession(database, account.id, readSessionToken(request))
+    const token = await createSession(database, account.id, readSessionToken(request), account.role)
+    if (!token) {
+      response.status(401).json({ message: 'Email or password is incorrect.' })
+      return
+    }
     const { id, displayName, email, role } = account
     response.cookie(cookieName, token, { ...cookieOptions, maxAge: sessionLifetimeMs })
     response.json({ user: { id, displayName, email, role } })

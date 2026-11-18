@@ -4,7 +4,7 @@ export type Room = {
   createdAt: Date; closedAt: Date | null; participantCount: number
   minReady: number; lobbyEndsAt: Date; warningEndsAt: Date | null; startedAt: Date | null
   resultsPublishedAt: Date | null
-  cancellationReason: 'organiser' | 'server_outage' | null
+  cancellationReason: 'organiser' | 'superadmin' | 'server_outage' | null
   cancellationNote: string | null
 }
 export const roomColumns = `r.id, r.code, r.competition_id AS "competitionId", c.title, r.admission_mode AS "admissionMode",

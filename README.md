@@ -8,6 +8,8 @@ Organisers can publish MCQ competitions, host a room, and see guest progress. Ad
 
 Organisers can cancel a running quiz with a reason. The server also cancels interrupted quizzes when it restarts. [Cancellation and recovery guide](docs/competition-cancellation.md)
 
+Superadmins can manage accounts, cancel open rooms, and review recent admin activity. [Superadmin setup guide](docs/superadmin-controls.md)
+
 Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
 
 The frontend was scaffolded with `npm create vite@latest . -- --template react-ts --no-interactive`. Dependency versions are recorded in `package-lock.json`.
