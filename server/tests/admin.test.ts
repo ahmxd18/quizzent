@@ -14,6 +14,14 @@ import { saveQuestion } from '../src/features/questions/question.service.js'
 import { publishCompetition } from '../src/features/competitions/publication.service.js'
 import { createRoom } from '../src/features/rooms/room.service.js'
 import { createGuestSession } from '../src/features/rooms/guest-session.service.js'
+import { hostingWeek } from '../src/features/rooms/hosting-policy.js'
+
+test('hosting weeks reset at midnight UTC on Monday', () => {
+  const sunday = hostingWeek(new Date('2026-01-04T23:59:59.999Z'))
+  assert.equal(sunday.start.toISOString(), '2025-12-29T00:00:00.000Z')
+  assert.equal(sunday.end.toISOString(), '2026-01-05T00:00:00.000Z')
+  assert.equal(hostingWeek(sunday.end).start.getTime(), sunday.end.getTime())
+})
 
 test('superadmin controls', async context => {
   assert.ok(process.env.DATABASE_URL)
@@ -73,7 +81,7 @@ test('superadmin controls', async context => {
       assert.equal(overview.status, 200)
       assert.equal(overview.headers.get('Cache-Control'), 'no-store')
       const { accounts } = await overview.json()
-      assert.deepEqual(accounts, [{ id: host.id, email: host.email, displayName: host.displayName, status: 'active', role: 'organiser' }])
+      assert.deepEqual(accounts, [{ id: host.id, email: host.email, displayName: host.displayName, status: 'active', role: 'organiser', hostingRestricted: false, weeklyHostingLimit: null }])
       const path = `/admin/users/${target.id}`
       const [oldA, oldB] = await Promise.all([cookieFor(target.id), cookieFor(target.id)])
       assert.equal((await send(`${path}/status`, rootCookie, 'PUT', { status: 'suspended' }, true)).status, 403)
@@ -86,12 +94,15 @@ test('superadmin controls', async context => {
       assert.equal((await send(`${path}/status`, rootCookie, 'PUT', { status: 'active' })).status, 200)
       assert.equal((await send('/auth/session', oldA)).status, 401)
       const targetOrganiserCookie = await signIn(target.email)
-      assert.equal((await send(`${path}/role`, rootCookie, 'PUT', { role: 'superadmin' })).status, 200)
+      assert.equal((await send(`${path}/role`, rootCookie, 'PUT', { role: 'superadmin' })).status, 400)
+      assert.equal((await send(`${path}/role`, rootCookie, 'PUT', { role: 'superadmin', password: 'wrong password' })).status, 403)
+      assert.equal((await send('/auth/session', targetOrganiserCookie)).status, 200)
+      assert.equal((await send(`${path}/role`, rootCookie, 'PUT', { role: 'superadmin', password })).status, 200)
       assert.equal((await send('/admin/overview', targetOrganiserCookie)).status, 401)
       assert.equal(await createSession(database, target.id, undefined, 'organiser'), null)
       targetAdminCookie = await signIn(target.email)
       assert.equal((await send('/admin/overview', targetAdminCookie)).status, 200)
-      assert.equal((await send(`/admin/users/${root.id}/role`, rootCookie, 'PUT', { role: 'organiser' })).status, 409)
+      assert.equal((await send(`/admin/users/${root.id}/role`, rootCookie, 'PUT', { role: 'organiser', password })).status, 409)
       assert.equal((await send(`/admin/users/${root.id}/status`, rootCookie, 'PUT', { status: 'suspended' })).status, 409)
     })
 
@@ -121,13 +132,111 @@ test('superadmin controls', async context => {
       assert.equal(actions[4].actorLabel, 'Local bootstrap')
     })
 
+    await context.test('enforces restrictions and the last weekly slot while preserving organiser access', async () => {
+      const { rows: [draft] } = await database.query('SELECT id FROM competitions WHERE organiser_id = $1', [host.id])
+      const { start } = hostingWeek(new Date())
+      await database.query('UPDATE rooms SET created_at = $2 WHERE organiser_id = $1', [host.id, new Date(start.getTime() - 1)])
+      const policyPath = `/admin/users/${host.id}/hosting`
+      const setPolicy = (restricted: boolean, weeklyLimit: number | null) => send(policyPath, rootCookie, 'PUT', { restricted, weeklyLimit })
+      const open = () => send('/rooms', hostCookie, 'POST', { competitionId: draft.id, admissionMode: 'open' })
+      assert.equal((await send(policyPath, hostCookie, 'PUT', { restricted: false, weeklyLimit: null })).status, 403)
+      assert.equal((await setPolicy(false, -1)).status, 400)
+      assert.equal((await setPolicy(false, 1.5)).status, 400)
+      assert.equal((await setPolicy(true, 1)).status, 200)
+      assert.equal((await open()).status, 403)
+      assert.equal((await send('/auth/session', hostCookie)).status, 200)
+      assert.equal((await send('/competitions', hostCookie)).status, 200)
+      const history = await (await send('/rooms', hostCookie)).json()
+      assert.equal(history.rooms.length, 1)
+      assert.equal(history.hosting.used, 0)
+      assert.equal((await setPolicy(false, 0)).status, 200)
+      assert.equal((await open()).status, 409)
+      assert.equal((await setPolicy(false, 1)).status, 200)
+      const concurrent = await Promise.all([open(), open()])
+      assert.deepEqual(concurrent.map(item => item.status).sort(), [201, 409])
+      const { room } = await concurrent.find(item => item.ok)!.json()
+      assert.equal((await send(`/rooms/${room.id}/close`, hostCookie, 'POST', {})).status, 200)
+      const exhausted = await open()
+      assert.equal(exhausted.status, 409)
+      assert.deepEqual(await exhausted.json(), { message: 'You have reached your weekly hosting limit.' })
+      assert.equal((await setPolicy(false, 2)).status, 200)
+      const forCancellation = await open()
+      assert.equal(forCancellation.status, 201)
+      const { room: cancelled } = await forCancellation.json()
+      assert.equal((await send(`/admin/rooms/${cancelled.id}/cancel`, rootCookie, 'POST', { reason: 'Cancelled within the quota week' })).status, 200)
+      assert.equal((await open()).status, 409)
+      assert.equal((await setPolicy(false, null)).status, 200)
+      assert.equal((await open()).status, 201)
+      assert.equal((await setPolicy(true, null)).status, 200)
+      const restriction = await (await send('/rooms', hostCookie)).json()
+      assert.equal(restriction.rooms.filter((entry: { status: string }) => entry.status === 'open').length, 1)
+      assert.equal(restriction.hosting.used, 3)
+      assert.equal(restriction.hosting.restricted, true)
+      assert.equal((await setPolicy(false, null)).status, 200)
+    })
+
+    await context.test('lists read-only records with exact owners, status filters, inclusive UTC dates and pagination', async () => {
+      const endpoint = '/admin/directory'
+      assert.equal((await send(endpoint, hostCookie)).status, 403)
+      assert.equal((await send(endpoint, guestCookie)).status, 401)
+      const get = async (query = '') => (await send(`${endpoint}${query}`, rootCookie)).json()
+      const drafted = await createOrganiser(database, { displayName: 'Draft Owner', email: 'draft-only@example.test', password })
+      await createCompetition(database, drafted.id, { title: 'Draft-only Quiz', description: '', questionTimeSeconds: 10 })
+      await database.query(
+        `UPDATE rooms SET created_at = CASE
+          WHEN cancellation_reason IS NOT NULL THEN '2026-01-15T23:59:59.999999Z'::timestamptz
+          WHEN status = 'closed' THEN '2026-01-16T00:00:00Z'::timestamptz
+          ELSE '2026-01-16T23:59:59.999999Z'::timestamptz END
+        WHERE organiser_id = $1`, [host.id],
+      )
+      const date = '&startDate=2026-01-16&endDate=2026-01-16'
+      const { records } = await get('?organiser=HOST%40EXAMPLE.TEST' + date)
+      assert.deepEqual(records.map((entry: { status: string }) => entry.status), ['live', 'ended'])
+      assert.ok(records.every((entry: { organiserEmail: string }) => entry.organiserEmail === host.email))
+      assert.equal((await get('?status=ended' + date)).records.length, 1)
+      assert.equal((await get('?status=cancelled&endDate=2026-01-15')).records.length, 2)
+      assert.equal((await get('?status=drafted&organiser=draft-only%40example.test')).records[0].kind, 'competition')
+      assert.equal((await get('?status=published&organiser=host%40example.test')).records[0].kind, 'competition')
+      assert.equal((await get('?organiser=missing%40example.test')).records.length, 0)
+      for (const bad of ['?startDate=2026-02-02&endDate=2026-02-01', '?endDate=2026-02-29', '?page=0', '?status=other']) {
+        assert.equal((await send(endpoint + bad, rootCookie)).status, 400)
+      }
+      await database.query(
+        "INSERT INTO competitions (organiser_id, title) SELECT $1, 'Draft ' || number FROM generate_series(1, 27) number",
+        [drafted.id],
+      )
+      const first = await get('?status=drafted&page=1')
+      const second = await get('?status=drafted&page=2')
+      assert.equal(first.records.length, 25)
+      assert.equal(first.hasNextPage, true)
+      assert.equal(second.records.length, 3)
+      assert.equal(second.hasNextPage, false)
+      assert.equal(new Set([...first.records, ...second.records].map(entry => entry.id)).size, 28)
+    })
+
     await context.test('rechecks queued admin writes when two superadmins try to demote each other', async () => {
       const responses = await Promise.all([
-        send(`/admin/users/${target.id}/role`, rootCookie, 'PUT', { role: 'organiser' }),
-        send(`/admin/users/${root.id}/role`, targetAdminCookie, 'PUT', { role: 'organiser' }),
+        send(`/admin/users/${target.id}/role`, rootCookie, 'PUT', { role: 'organiser', password }),
+        send(`/admin/users/${root.id}/role`, targetAdminCookie, 'PUT', { role: 'organiser', password }),
       ])
       assert.deepEqual(responses.map(response => response.status).sort(), [200, 401])
       assert.equal((await database.query("SELECT id FROM users WHERE role = 'superadmin' AND status = 'active'")).rowCount, 1)
+    })
+    await context.test('rate limits password verification across sessions and targets of the same admin', async () => {
+      const { rows: [active] } = await database.query<{ id: string }>("SELECT id FROM users WHERE role = 'superadmin' AND status = 'active'")
+      const [sessionOne, sessionTwo] = await Promise.all([cookieFor(active.id), cookieFor(active.id)])
+      const attempt = (id: string, cookie: string, secret: string) => send(`/admin/users/${id}/role`, cookie, 'PUT', { role: 'superadmin', password: secret })
+      let limited = false
+      for (let index = 0; index <= 5; index++) {
+        const response = await attempt(host.id, sessionOne, 'incorrect')
+        if (response.status === 429) { limited = true; break }
+        assert.equal(response.status, 403)
+      }
+      assert.equal(limited, true)
+      const response = await attempt(active.id === root.id ? target.id : root.id, sessionTwo, password)
+      assert.equal(response.status, 429)
+      assert.ok(response.headers.has('Retry-After'))
+      assert.equal((await send('/admin/overview', sessionTwo)).status, 200)
     })
   } finally {
     await runtime?.close()

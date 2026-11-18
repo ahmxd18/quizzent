@@ -1,13 +1,15 @@
 import type { Pool, PoolClient } from 'pg'
 import { inTransaction } from '../../lib/transaction.js'
 import { findSessionUser, type SessionUser } from '../auth/session.service.js'
+import { verifyPassword } from '../auth/password.js'
 import { writeRoomCancellation } from '../rooms/cancellation.service.js'
 import { AdminError } from './admin.error.js'
 
 type AccountStatus = 'active' | 'suspended'
 type Account = Pick<SessionUser, 'id' | 'email' | 'role'> & { status: AccountStatus }
-type AccountChange = { field: 'role'; value: SessionUser['role'] } | { field: 'status'; value: AccountStatus }
-type AuditAction = 'bootstrap' | 'role_changed' | 'status_changed' | 'room_cancelled'
+type AccountChange = { field: 'role'; value: SessionUser['role']; password: string } | { field: 'status'; value: AccountStatus }
+type AuditAction = 'bootstrap' | 'role_changed' | 'status_changed' | 'room_cancelled' | 'hosting_changed'
+type HostingPolicy = { restricted: boolean; weeklyLimit: number | null }
 
 async function lockAdminChanges(client: PoolClient) {
   // Serialise admin changes, including the one-time bootstrap. Postgres releases the lock at commit.
@@ -51,6 +53,14 @@ export async function bootstrapSuperadmin(database: Pool, email: string) {
 export async function changeAccount(database: Pool, token: string | undefined, targetId: string, change: AccountChange) {
   return adminWrite(database, token, async (client, actor) => {
     if (actor.id === targetId) throw new AdminError(409, 'You cannot change your own role or status.')
+    if (change.field === 'role') {
+      const { rows: [credentials] } = await client.query<{ password_hash: string }>(
+        'SELECT password_hash FROM users WHERE id = $1', [actor.id],
+      )
+      if (!credentials || !await verifyPassword(change.password, credentials.password_hash)) {
+        throw new AdminError(403, 'The current password is incorrect.')
+      }
+    }
     const { rows: [target] } = await client.query<Account>(
       'SELECT id, email, role, status FROM users WHERE id = $1 FOR UPDATE', [targetId],
     )
@@ -64,6 +74,21 @@ export async function changeAccount(database: Pool, token: string | undefined, t
     await client.query('DELETE FROM user_sessions WHERE user_id = $1', [targetId])
     const action = change.field === 'role' ? 'role_changed' : 'status_changed'
     await audit(client, actor, action, target.id, target.email, `${before} → ${change.value}`)
+  })
+}
+
+export async function setHostingPolicy(database: Pool, token: string | undefined, targetId: string, policy: HostingPolicy) {
+  await adminWrite(database, token, async (client, actor) => {
+    const { rows: [target] } = await client.query<HostingPolicy & { email: string }>(
+      'SELECT email, hosting_restricted AS restricted, weekly_hosting_limit AS "weeklyLimit" FROM users WHERE id = $1 FOR UPDATE',
+      [targetId],
+    )
+    if (!target) throw new AdminError(404, 'Account not found.')
+    if (target.restricted === policy.restricted && target.weeklyLimit === policy.weeklyLimit) return
+    await client.query('UPDATE users SET hosting_restricted = $2, weekly_hosting_limit = $3 WHERE id = $1',
+      [targetId, policy.restricted, policy.weeklyLimit])
+    const describe = (value: HostingPolicy) => `${value.restricted ? 'Restricted' : 'Allowed'}, ${value.weeklyLimit ?? 'unlimited'}/week`
+    await audit(client, actor, 'hosting_changed', targetId, target.email, `${describe(target)} → ${describe(policy)}`)
   })
 }
 
@@ -81,7 +106,8 @@ export async function cancelAdminRoom(database: Pool, token: string | undefined,
 export async function inspectAdminOverview(database: Pool, search: string) {
   const [accounts, rooms, actions] = await Promise.all([
     database.query(
-      `SELECT id, display_name AS "displayName", email, role, status
+      `SELECT id, display_name AS "displayName", email, role, status,
+         hosting_restricted AS "hostingRestricted", weekly_hosting_limit AS "weeklyHostingLimit"
        FROM users WHERE position($1 in lower(email)) > 0 OR position($1 in lower(display_name)) > 0
        ORDER BY created_at DESC, id LIMIT 50`, [search],
     ),
