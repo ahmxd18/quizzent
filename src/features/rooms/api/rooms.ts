@@ -7,7 +7,7 @@ export type Room = {
   createdAt: string; closedAt: string | null
   minReady: number; lobbyEndsAt: string; warningEndsAt: string | null; startedAt: string | null
   resultsPublishedAt: string | null
-  cancellationReason: 'organiser' | 'server_outage' | null
+  cancellationReason: 'organiser' | 'superadmin' | 'server_outage' | null
   cancellationNote: string | null
 }
 export type Participant = { id: string; nickname: string; participantNumber: number; organiserReference: string | null; joinedAt: string; admitted: boolean }

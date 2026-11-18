@@ -15,6 +15,7 @@ import { RoomEntryPage } from '../features/rooms/pages/RoomEntryPage'
 // Load the Socket.IO client only on pages that use the live lobby.
 const loadGuestRoom = async () => ({ Component: (await import('../features/rooms/pages/GuestRoomPage')).GuestRoomPage })
 const loadOrganiserRoom = async () => ({ Component: (await import('../features/rooms/pages/OrganiserRoomPage')).OrganiserRoomPage })
+const loadAdmin = async () => ({ Component: (await import('../features/admin/pages/AdminPage')).AdminPage })
 
 // Data-router mode enables the editor's supported navigation blocker.
 const router = createBrowserRouter(createRoutesFromElements(
@@ -26,6 +27,7 @@ const router = createBrowserRouter(createRoutesFromElements(
     <Route path="login" element={<LoginPage />} />
     <Route path="signup" element={<SignupPage />} />
     <Route element={<RequireSession />}>
+      <Route path="admin" lazy={loadAdmin} />
       <Route path="organiser" element={<OrganiserPage />} />
       <Route path="organiser/competitions/new" element={<CreateCompetitionPage />} />
       <Route path="organiser/competitions/:id/edit" element={<EditCompetitionPage />} />

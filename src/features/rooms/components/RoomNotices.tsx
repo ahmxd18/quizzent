@@ -16,7 +16,8 @@ export function CancellationNotice({ room }: { room: Room }) {
       <p className="break-words text-sm leading-relaxed text-muted">
         {room.cancellationReason === 'server_outage'
           ? 'The server went down while this competition was running.'
-          : room.cancellationNote ?? 'The organiser cancelled this competition.'}
+          : room.cancellationNote ?? (room.cancellationReason === 'superadmin'
+            ? 'A superadmin cancelled this competition.' : 'The organiser cancelled this competition.')}
       </p>
     </section>
   )

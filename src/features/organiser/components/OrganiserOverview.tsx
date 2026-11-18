@@ -1,4 +1,4 @@
-import { Button } from '../../../components/ui/Button'
+import { Button, ButtonLink } from '../../../components/ui/Button'
 import { ApiError } from '../../../lib/http'
 import { useLogout } from '../../auth/hooks/useLogout'
 import type { SessionUser } from '../../auth/api/session'
@@ -12,6 +12,7 @@ export function OrganiserOverview({ user }: { user: SessionUser }) {
       <p className="text-sm font-semibold text-brand">Organiser space</p>
       <h1 className="mt-3 break-words font-display text-4xl tracking-tight sm:text-5xl">Welcome, {user.displayName}.</h1>
       <p className="mt-4 break-words text-muted">Signed in as {user.email}</p>
+      {user.role === 'superadmin' && <ButtonLink to="/admin" variant="secondary" className="mt-5">Admin controls</ButtonLink>}
       <RoomList />
       <CompetitionList />
       {logout.error && <p role="alert" className="mt-6 text-sm text-danger">{logout.error instanceof ApiError ? logout.error.message : 'Could not log out. Check your connection and try again.'}</p>}

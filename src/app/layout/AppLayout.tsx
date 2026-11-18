@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   '/login': 'Organiser login — Quizzent',
   '/signup': 'Become an organiser — Quizzent',
   '/organiser': 'Organiser space — Quizzent',
+  '/admin': 'Superadmin — Quizzent',
   '/organiser/competitions/new': 'Create competition — Quizzent',
 }
 const routeTitles: [RegExp, string][] = [
