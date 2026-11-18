@@ -10,6 +10,7 @@ import { emptyBody, jsonWrites, noStore, validateBody, validateId } from './room
 import type { RoomChanged } from '../lobby/lobby.server.js'
 import { readOrganiserProgress } from '../results/results.service.js'
 import { cancelRoom } from './cancellation.service.js'
+import { readHostingPolicy } from './hosting-policy.js'
 
 export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   const router = express.Router()
@@ -18,7 +19,8 @@ export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   router.param('invitationId', validateId)
   router.get('/', async (_request, response) => {
     const user: SessionUser = response.locals.user
-    response.json({ rooms: await listRooms(database, user.id) })
+    const [rooms, hosting] = await Promise.all([listRooms(database, user.id), readHostingPolicy(database, user.id)])
+    response.json({ rooms, hosting })
   })
   router.post('/', validateBody(createRoomSchema), async (_request, response) => {
     const user: SessionUser = response.locals.user
