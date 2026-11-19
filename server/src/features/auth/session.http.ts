@@ -1,6 +1,7 @@
 import type { Request, RequestHandler } from 'express'
 import type { Pool } from 'pg'
 import { findSessionUser } from './session.service.js'
+import { isSameOrigin } from '../../lib/same-origin.js'
 
 export function sessionCookieSettings() {
   const production = process.env.NODE_ENV === 'production'
@@ -17,7 +18,8 @@ export function readSessionToken(request: Request): string | undefined {
 
 export const requireSameOriginRequest: RequestHandler = (request, response, next) => {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
-    && (request.get('X-Quizzent-Request') !== '1' || request.get('Sec-Fetch-Site') === 'cross-site')) {
+    && (request.get('X-Quizzent-Request') !== '1' || request.get('Sec-Fetch-Site') === 'cross-site'
+      || (!!request.get('Origin') && !isSameOrigin(request.get('Origin')!, request.get('Host'))))) {
     // This custom header requires a CORS preflight from another origin. CORS stays disabled.
     response.status(403).json({ message: 'This request must come from Quizzent.' })
     return

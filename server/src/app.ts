@@ -11,10 +11,12 @@ import { createAttemptRouter } from './features/attempts/attempt.routes.js'
 import { createGuestResultsRouter } from './features/results/results.routes.js'
 import { createAdminRouter } from './features/admin/admin.routes.js'
 import type { RoomChanged } from './features/lobby/lobby.server.js'
+import { apiHeaders } from './middleware/api-headers.js'
 
 export function createApp(database: Pool, roomChanged?: RoomChanged) {
   const app = express()
   app.disable('x-powered-by')
+  app.use(apiHeaders)
   app.use(cookieParser())
 
   // This checks the API process; PostgreSQL availability is checked separately.

@@ -1,3 +1,4 @@
+import { accountWriteLimit } from '../auth/account-write-limit.js'
 import express from 'express'
 import type { Pool } from 'pg'
 import { z } from 'zod'
@@ -14,7 +15,7 @@ import { readHostingPolicy } from './hosting-policy.js'
 
 export function createRoomRouter(database: Pool, roomChanged?: RoomChanged) {
   const router = express.Router()
-  router.use(noStore, requireSameOriginRequest, requireSession(database), jsonWrites, express.json({ limit: '8kb' }))
+  router.use(noStore, requireSameOriginRequest, requireSession(database), accountWriteLimit(), jsonWrites, express.json({ limit: '8kb' }))
   router.param('id', validateId)
   router.param('invitationId', validateId)
   router.get('/', async (_request, response) => {

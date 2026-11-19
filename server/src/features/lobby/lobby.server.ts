@@ -4,6 +4,8 @@ import { Server } from 'socket.io'
 import { getLobbyAccess, type LobbyAccess } from './lobby-access.js'
 import { LobbyPresence } from './presence.js'
 import { createRoomStart } from './room-start.js'
+import { isSameOrigin } from '../../lib/same-origin.js'
+import { createReadyLimit } from './ready-limit.js'
 
 type OnlineParticipant = { participantId: string; ready: boolean }
 type Counts = { onlineCount: number; readyCount: number; serverNow: number }
@@ -20,16 +22,16 @@ const channel = (roomId: string) => `lobby:${roomId}`
 
 export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs = 8_000, warningMs = 5_000, isReady = () => true) {
   const presence = new LobbyPresence(reconnectGraceMs)
+  const readyLimit = createReadyLimit()
   const io = new Server<ClientEvents, ServerEvents, Record<never, never>, SocketData>(server, {
     transports: ['websocket'],
     pingInterval: 5_000,
     pingTimeout: 5_000,
     maxHttpBufferSize: 4_096,
     allowRequest: (request, accept) => {
-      const scheme = process.env.NODE_ENV === 'production' ? 'https' : 'http'
       const { host, origin } = request.headers
       // Browsers send Origin on WebSocket upgrades. Only the Quizzent site may use these cookies.
-      accept(null, isReady() && !!host && origin === `${scheme}://${host}`)
+      accept(null, isReady() && !!origin && isSameOrigin(origin, host))
     },
   })
   let stopping = false
@@ -93,6 +95,11 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
         reply({ ok: false, message: 'A readiness update is already in progress.' })
         return
       }
+      // One budget across tabs and reconnects, before any readiness database query.
+      if (!readyLimit.allow(access.participantId)) {
+        reply({ ok: false, message: 'Too many readiness changes. Please wait a few seconds.' })
+        return
+      }
       checking = true
       try {
         const currentAccess = await getLobbyAccess(database, socket.handshake.auth, socket.request.headers.cookie)
@@ -125,6 +132,7 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
   const reviewTimer = setInterval(async () => {
     if (reviewing) return
     reviewing = true
+    readyLimit.prune()
     await Promise.allSettled([...io.sockets.sockets.values()].map(async socket => {
       const access = await getLobbyAccess(database, socket.handshake.auth, socket.request.headers.cookie)
       if (!access) socket.disconnect()
@@ -146,6 +154,7 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
       start.stop()
       clearInterval(reviewTimer)
       presence.clearAll()
+      readyLimit.clear()
       return io.close()
     },
   }
