@@ -132,15 +132,52 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Record privileged actions; do not add arbitrary score editing.
     Check: role escalation, session revocation, and access across organiser accounts.
 
+17. [ ] Navigation, admin safeguards, and interface improvements
+    - Signed-in navigation: remove signup links throughout the UI for organisers and
+      superadmins, and redirect direct visits to /signup to the organiser space.
+      Replace the header's Host a quiz button with Log out for signed-in users.
+      Add a superadmin-only Admin controls link beside the main navigation links
+      and provide direct access to /admin/directory from that navigation.
+    - Room history: hide Refresh participants on closed, cancelled, or ended rooms
+      and avoid participant refresh requests driven by that button.
+    - Admin safeguards: require the acting superadmin's current password to suspend
+      an organiser. Verify it on the server with the same rate limits as role changes.
+      Block promotion of suspended organisers and block suspension of superadmins,
+      including by another superadmin. Enforce both rules in the API.
+    - Shared components: build themed Select, MultiSelect, and Modal components in
+      src/components/. The Modal should accept controlled open state (isOpen and
+      setIsOpen or an equivalent callback), an onClose callback, and close on an
+      outside click or Escape. Use it for admin confirmations and restore keyboard
+      focus to the control that opened the dialog.
+    - Feedback: use transient success, error, and info notifications for action
+      feedback throughout the app. Define the three variants centrally, including
+      theme colours, dismissal timing, and accessible announcements. If using a
+      toast library, wrap it in the shared notification component. Keep field-level
+      validation and important room states visible where users need them.
+    - Admin directory: replace the organiser email filter with a multi-select
+      dropdown and add a separate free-text Search field. Keep the existing status
+      and inclusive date filters. Apply filters before pagination and reset to page
+      one when they change. Return totalElements, currentPage, pageSize, and
+      totalPages from the API. Default to 10 rows in the table and API, and honour
+      larger supported page sizes when the table requests them.
+    - Overview polish: animate answer selection and the transition between two
+      sample questions that loop on the public overview. Keep the demo separate
+      from live quiz data and respect reduced-motion preferences. Add a favicon
+      that matches the homepage logo.
+    Check: guest and signed-in navigation, direct signup access, closed-room UI,
+    suspension password checks and rate limits, concurrent role/status changes,
+    modal dismissal and keyboard focus, notification visibility, combined filters
+    and pagination, and the demo and favicon on desktop and mobile.
+
 FINISH AND PRESENT
 
-17. [ ] MVP hardening
+18. [ ] MVP hardening
     Review validation, authorisation, rate limits, session/CSRF controls, and error messages.
     Run an end-to-end organiser + guest journey and concurrency regression checks.
     Load-test the target 30–50 competitors; document measured results honestly.
     Review accessibility, colour contrast, mobile layouts, and secrets in tracked files.
 
-18. [ ] Free/minimal-cost deployment and portfolio documentation
+19. [ ] Free/minimal-cost deployment and portfolio documentation
     Compare current free hosting limits before choosing providers or creating accounts.
     Verify persistent connections, idle suspension, database limits, and outage behaviour.
     Add deployment configuration, production session settings, logs, and backup guidance.
@@ -155,4 +192,5 @@ multiple question types, and a general configurable scoring engine.
 CURRENT BOUNDARY
 Steps 01–15 were merged through PRs #1–#12. Step 16 adds one-time superadmin
 setup, account and room controls, session revocation, and an audit trail.
-Next: MVP hardening (step 17), then deployment and portfolio documentation (step 18).
+Next: navigation, admin safeguards, and interface improvements (step 17), followed
+by MVP hardening (step 18) and deployment and portfolio documentation (step 19).
