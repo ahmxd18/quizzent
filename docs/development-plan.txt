@@ -132,7 +132,7 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
     Record privileged actions; do not add arbitrary score editing.
     Check: role escalation, session revocation, and access across organiser accounts.
 
-17. [ ] Navigation, admin safeguards, and interface improvements
+17. [x] Navigation, admin safeguards, and interface improvements
     - Signed-in navigation: remove signup links throughout the UI for organisers and
       superadmins, and redirect direct visits to /signup to the organiser space.
       Replace the header's Host a quiz button with Log out for signed-in users.
@@ -190,7 +190,11 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–15 were merged through PRs #1–#12. Step 16 adds one-time superadmin
-setup, account and room controls, session revocation, and an audit trail.
-Next: navigation, admin safeguards, and interface improvements (step 17), followed
-by MVP hardening (step 18) and deployment and portfolio documentation (step 19).
+Steps 01–16 and the hosting policy additions were merged through PRs #1–#14.
+Step 17 adds signed-in navigation, stronger admin safeguards, shared controls and
+notifications, multi-organiser directory filtering with pagination totals, and
+homepage polish. The server suite passes 71 checks. Desktop/mobile browser checks
+covered navigation, modal dismissal/focus, notifications, filtering/pagination,
+reduced motion, and closed-room request behavior.
+Next: MVP hardening (step 18), followed by deployment and portfolio documentation
+(step 19).
