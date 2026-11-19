@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Button } from './Button'
+import { Modal } from './Modal'
 
 type ConfirmDialogProps = {
   open: boolean; title: string; description: string
@@ -9,23 +10,13 @@ type ConfirmDialogProps = {
 }
 
 export function ConfirmDialog({ open, title, description, onConfirm, onCancel, confirmLabel = 'Discard changes', cancelLabel = 'Keep editing', pending = false, confirmDisabled = false, children }: ConfirmDialogProps) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const id = useId()
-  useEffect(() => {
-    if (open && !ref.current?.open) ref.current?.showModal()
-    else if (!open && ref.current?.open) ref.current.close()
-  }, [open])
   return (
-    <dialog ref={ref} aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}
-      onCancel={event => { event.preventDefault(); if (!pending) onCancel() }}
-      className="m-auto w-full max-w-md rounded-card border border-outline bg-surface p-7 text-foreground shadow-card backdrop:bg-foreground/35">
-      <h2 id={`${id}-title`} className="text-xl font-semibold">{title}</h2>
-      <p id={`${id}-description`} className="mt-3 text-sm leading-relaxed text-muted">{description}</p>
+    <Modal isOpen={open} title={title} description={description} onClose={onCancel} dismissible={!pending}>
       {children}
       <div className="mt-7 flex flex-wrap gap-3">
         <Button onClick={onCancel} autoFocus disabled={pending}>{cancelLabel}</Button>
         <Button variant="secondary" onClick={onConfirm} disabled={pending || confirmDisabled}>{pending ? 'Working…' : confirmLabel}</Button>
       </div>
-    </dialog>
+    </Modal>
   )
 }

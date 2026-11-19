@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { login } from '../api/session'
 import { sessionKey } from './useSession'
+import { notify } from '../../../lib/notifications'
 
 export function useLogin() {
   const client = useQueryClient()
@@ -10,6 +11,7 @@ export function useLogin() {
       // An older session request must not overwrite the successful login.
       await client.cancelQueries({ queryKey: sessionKey })
       client.setQueryData(sessionKey, user)
+      notify.success('You’re logged in.')
     },
   })
 }

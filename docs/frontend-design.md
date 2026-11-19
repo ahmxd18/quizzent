@@ -66,6 +66,12 @@ Atomic here means small, composable pieces. We do not add separate atom/molecule
 - Prefer direct imports. Avoid barrels, polymorphic component APIs, global state, and abstractions before there is a need.
 - Enable TypeScript strict checking. Keep comments focused on decisions rather than narrating JSX.
 
-Routing uses React Router's data-router mode through createBrowserRouter/RouterProvider, enabling supported navigation blocking for unsaved draft edits. TanStack Query handles API state; no framework or loader migration is needed. Signup/login and private draft create/list/edit flows connect to the backend. Guest joining remains a clearly marked preview. TextareaField and the themed HTML ConfirmDialog join the generic controls; competition-specific UI stays inside its feature.
+Routing uses React Router's data-router mode through createBrowserRouter/RouterProvider, enabling navigation blocking for unsaved draft edits. Signed-in users visiting login or signup return to their organiser space. The header provides logout and role-aware admin navigation.
+
+The shared Modal uses a native dialog for focus containment. Escape and backdrop clicks dismiss it, and focus returns to the opening control. ConfirmDialog composes Modal for decisions and prevents dismissal while a request is pending. Select wraps a labelled native dropdown. MultiSelect supplies a searchable checkbox dropdown with controlled selection and paged option loading.
+
+Action feedback uses the central notification store and Notifications component. Success, error, and info variants share theme tokens and dismiss after 4.5, 8, and 5.5 seconds. Hovering or focusing a notification pauses its dismissal. Notifications sit at the top right, with a shrinking bottom line showing the remaining time. Click anywhere on a card to dismiss it; keyboard users can focus it and press Enter or Space. Each has a screen-reader announcement. Field validation, connection warnings, and persistent room outcomes remain visible within the relevant flow. RequestError forwards request failures to notifications.
+
+The homepage preview cycles through two local examples, animating selection and transitions. Users can pause it. Reduced-motion preferences disable autoplay and provide a manual next-sample button. The header mark and browser favicon use the same SVG asset.
 
 Sources: [WCAG 2.2](https://www.w3.org/TR/WCAG22/) and [React Router declarative mode](https://reactrouter.com/start/modes).

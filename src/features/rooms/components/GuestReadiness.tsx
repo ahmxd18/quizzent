@@ -24,7 +24,6 @@ export function GuestReadiness({ room }: { room: Room }) {
         {lobby.updating ? 'Updating…' : ready ? 'Mark as not ready' : 'I’m ready'}
       </Button>
       {lobby.state && <p className="text-sm text-muted">{lobby.state.readyCount} ready · {lobby.state.onlineCount} online</p>}
-      {lobby.actionError && <p className="text-sm font-semibold text-brand" role="alert">{lobby.actionError}</p>}
     </section>
   )
 }

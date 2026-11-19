@@ -7,7 +7,8 @@ import { AdminError } from './admin.error.js'
 
 type AccountStatus = 'active' | 'suspended'
 type Account = Pick<SessionUser, 'id' | 'email' | 'role'> & { status: AccountStatus }
-type AccountChange = { field: 'role'; value: SessionUser['role']; password: string } | { field: 'status'; value: AccountStatus }
+type AccountChange = { field: 'role'; value: SessionUser['role']; password: string }
+  | { field: 'status'; value: AccountStatus; password?: string }
 type AuditAction = 'bootstrap' | 'role_changed' | 'status_changed' | 'room_cancelled' | 'hosting_changed'
 type HostingPolicy = { restricted: boolean; weeklyLimit: number | null }
 
@@ -53,18 +54,24 @@ export async function bootstrapSuperadmin(database: Pool, email: string) {
 export async function changeAccount(database: Pool, token: string | undefined, targetId: string, change: AccountChange) {
   return adminWrite(database, token, async (client, actor) => {
     if (actor.id === targetId) throw new AdminError(409, 'You cannot change your own role or status.')
-    if (change.field === 'role') {
-      const { rows: [credentials] } = await client.query<{ password_hash: string }>(
-        'SELECT password_hash FROM users WHERE id = $1', [actor.id],
-      )
-      if (!credentials || !await verifyPassword(change.password, credentials.password_hash)) {
-        throw new AdminError(403, 'The current password is incorrect.')
-      }
-    }
     const { rows: [target] } = await client.query<Account>(
       'SELECT id, email, role, status FROM users WHERE id = $1 FOR UPDATE', [targetId],
     )
     if (!target) throw new AdminError(404, 'Account not found.')
+    if (change.field === 'role' && change.value === 'superadmin' && target.status === 'suspended') {
+      throw new AdminError(409, 'Reactivate this account before granting superadmin access.')
+    }
+    if (change.field === 'status' && change.value === 'suspended' && target.role === 'superadmin') {
+      throw new AdminError(409, 'Superadmin accounts cannot be suspended.')
+    }
+    if (change.field === 'role' || change.value === 'suspended') {
+      const { rows: [credentials] } = await client.query<{ password_hash: string }>(
+        'SELECT password_hash FROM users WHERE id = $1', [actor.id],
+      )
+      if (!credentials || !change.password || !await verifyPassword(change.password, credentials.password_hash)) {
+        throw new AdminError(403, 'The current password is incorrect.')
+      }
+    }
     const before = target[change.field]
     if (before === change.value) return
     const update = change.field === 'role'

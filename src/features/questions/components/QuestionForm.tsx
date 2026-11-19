@@ -1,10 +1,10 @@
+import { RequestError } from '../../../components/ui/RequestError'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { TextareaField } from '../../../components/ui/TextareaField'
 import { TextField } from '../../../components/ui/TextField'
-import { ApiError } from '../../../lib/http'
 import { useUnsavedChanges } from '../../competitions/hooks/useUnsavedChanges'
 import type { Question } from '../api/questions'
 import { useQuestionActions } from '../hooks/useQuestions'
@@ -19,10 +19,8 @@ export function QuestionForm({ competitionId, question, onClose }: { competition
   const dirty = prompt !== (question?.prompt ?? '') || correct !== initialCorrect || options.some((option, index) => option !== initialOptions[index])
   const navigation = useUnsavedChanges(dirty)
   const { save } = useQuestionActions(competitionId, question?.id)
-  const errorRef = useRef<HTMLDivElement>(null)
   const promptRef = useRef<HTMLTextAreaElement>(null)
   useEffect(() => { promptRef.current?.focus() }, [])
-  useEffect(() => { if (save.error) errorRef.current?.focus() }, [save.error])
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -37,7 +35,7 @@ export function QuestionForm({ competitionId, question, onClose }: { competition
     <Card className="p-6 sm:p-8">
       <h2 className="mb-6 text-xl font-semibold">{question ? 'Edit question' : 'Add a question'}</h2>
       <form onSubmit={submit} aria-busy={save.isPending} className="space-y-6">
-        {save.error && <div ref={errorRef} role="alert" tabIndex={-1} className="rounded-xl border border-danger p-4 text-sm text-danger">{save.error instanceof ApiError ? save.error.message : 'Could not save your question. Check your connection and try again.'}</div>}
+        <RequestError error={save.error} fallback="Could not save your question. Please try again." />
         <fieldset disabled={save.isPending} className="space-y-6">
           <TextareaField ref={promptRef} label="Question" name="prompt" value={prompt} onChange={event => setPrompt(event.target.value)} required maxLength={1000} hint="Keep it clear and specific. Up to 1,000 characters." placeholder="What would you like to ask?" />
           <fieldset className="space-y-4">

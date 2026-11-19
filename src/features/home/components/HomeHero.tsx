@@ -1,8 +1,10 @@
 import { ArrowUpRight, Check } from 'lucide-react'
 import { ButtonLink } from '../../../components/ui/Button'
 import { CompetitionPreview } from './CompetitionPreview'
+import { useSession } from '../../auth/hooks/useSession'
 
 export function HomeHero() {
+  const { data: user, isPending } = useSession()
   return (
     <section aria-labelledby="home-heading" className="grid items-center gap-14 pb-20 pt-12 sm:pt-16 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:pb-24 lg:pt-20">
       <div>
@@ -17,7 +19,7 @@ export function HomeHero() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <ButtonLink to="/join">Join a room <ArrowUpRight size={18} aria-hidden="true" /></ButtonLink>
-          <ButtonLink to="/signup" variant="secondary">Host a competition</ButtonLink>
+          {!isPending && <ButtonLink to={user ? '/organiser' : '/signup'} variant="secondary">Host a competition</ButtonLink>}
         </div>
         <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs font-medium text-muted">
           <li className="inline-flex items-center gap-1.5"><Check size={15} className="text-brand" aria-hidden="true" /> No account needed to play</li>

@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { notify } from '../../../lib/notifications'
+import { RequestError } from '../../../components/ui/RequestError'
+import { useState, type FormEvent } from 'react'
 import { LoaderCircle, Save } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Button, ButtonLink } from '../../../components/ui/Button'
@@ -17,27 +19,24 @@ export function CompetitionForm({ competition }: { competition?: Competition }) 
   const [seconds, setSeconds] = useState(String(competition?.questionTimeSeconds ?? 10))
   const mutation = useSaveCompetition(competition?.id)
   const navigate = useNavigate()
-  const errorRef = useRef<HTMLDivElement>(null)
   const dirty = title !== (competition?.title ?? '') || description !== (competition?.description ?? '') || seconds !== String(competition?.questionTimeSeconds ?? 10)
   const navigation = useUnsavedChanges(dirty)
   const fieldErrors = mutation.error instanceof ApiError ? mutation.error.fieldErrors : {}
-  useEffect(() => { if (mutation.error) errorRef.current?.focus() }, [mutation.error])
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (mutation.isPending) return
     mutation.mutate({ title, description, questionTimeSeconds: Number(seconds) }, { onSuccess: () => {
       navigation.allowSavedNavigation()
-      navigate('/organiser', { replace: true, state: { draftSaved: true } })
+      notify.success('Your draft has been saved.')
+      navigate('/organiser', { replace: true })
     } })
   }
 
   return (
     <><Card className="p-6 sm:p-9">
       <form onSubmit={submit} aria-busy={mutation.isPending}>
-        {mutation.error && <div ref={errorRef} role="alert" tabIndex={-1} className="mb-6 rounded-xl border border-danger p-4 text-sm text-danger">
-          {mutation.error instanceof ApiError ? mutation.error.message : 'Could not save your draft. Check your connection and try again.'}
-        </div>}
+        <RequestError error={mutation.error} fallback="Could not save your draft. Please try again." />
         <fieldset disabled={mutation.isPending} className="space-y-7">
           <TextField label="Competition title" name="title" value={title} onChange={event => setTitle(event.target.value)} required maxLength={100} placeholder="e.g. Friday Brainstorm" hint="A clear name makes your competition easy to find." error={fieldErrors.title} />
           <TextareaField label="Description (optional)" name="description" value={description} onChange={event => setDescription(event.target.value)} maxLength={500} placeholder="What’s this competition about?" hint={`${description.length}/500 characters`} error={fieldErrors.description} />

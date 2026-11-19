@@ -6,6 +6,7 @@ import { JoinPage } from '../features/join/pages/JoinPage'
 import { AppLayout } from './layout/AppLayout'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { RequireSession } from '../features/auth/components/RequireSession'
+import { RequireGuest } from '../features/auth/components/RequireGuest'
 import { OrganiserPage } from '../features/organiser/pages/OrganiserPage'
 import { CreateCompetitionPage } from '../features/competitions/pages/CreateCompetitionPage'
 import { EditCompetitionPage } from '../features/competitions/pages/EditCompetitionPage'
@@ -25,8 +26,10 @@ const router = createBrowserRouter(createRoutesFromElements(
     <Route path="join" element={<JoinPage />} />
     <Route path="join/:code" element={<RoomEntryPage />} />
     <Route path="rooms/:id" lazy={loadGuestRoom} />
-    <Route path="login" element={<LoginPage />} />
-    <Route path="signup" element={<SignupPage />} />
+    <Route element={<RequireGuest />}>
+      <Route path="login" element={<LoginPage />} />
+      <Route path="signup" element={<SignupPage />} />
+    </Route>
     <Route element={<RequireSession />}>
       <Route path="admin" lazy={loadAdmin} />
       <Route path="admin/directory" lazy={loadAdminDirectory} />
