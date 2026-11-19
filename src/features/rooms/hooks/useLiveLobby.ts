@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { io, type Socket } from 'socket.io-client'
+import { notify } from '../../../lib/notifications'
 
 type OnlineParticipant = { participantId: string; ready: boolean }
 type Counts = { onlineCount: number; readyCount: number; serverNow: number }
@@ -18,7 +19,6 @@ export function useLiveLobby(roomId: string, role: 'organiser' | 'guest', enable
   const [state, setState] = useState<LobbyState>()
   const [clockOffset, setClockOffset] = useState(0)
   const [updating, setUpdating] = useState(false)
-  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     if (!enabled) return
@@ -46,7 +46,6 @@ export function useLiveLobby(roomId: string, role: 'organiser' | 'guest', enable
     socket.on('disconnect', () => {
       setConnection(socket.active ? 'reconnecting' : 'unavailable')
       setUpdating(false)
-      setActionError('')
       if (!socket.active) refreshRoom()
     })
     socket.connect()
@@ -62,12 +61,11 @@ export function useLiveLobby(roomId: string, role: 'organiser' | 'guest', enable
     const socket = socketRef.current
     if (!socket?.connected || updating) return
     setUpdating(true)
-    setActionError('')
     try {
       const result = await socket.timeout(4_000).emitWithAck('lobby:ready', ready)
-      if (socketRef.current === socket && !result.ok) setActionError(result.message)
+      if (socketRef.current === socket && !result.ok) notify.error(result.message)
     } catch {
-      if (socketRef.current === socket && socket.connected) setActionError('The server didn’t confirm the change. Please try again.')
+      if (socketRef.current === socket && socket.connected) notify.error('The server didn’t confirm the change. Please try again.')
     } finally {
       if (socketRef.current === socket) setUpdating(false)
     }
@@ -78,5 +76,5 @@ export function useLiveLobby(roomId: string, role: 'organiser' | 'guest', enable
     socketRef.current?.connect()
   }
 
-  return { connection, state: enabled && connection === 'live' ? state : undefined, clockOffset, setReady, updating, actionError, reconnect }
+  return { connection, state: enabled && connection === 'live' ? state : undefined, clockOffset, setReady, updating, reconnect }
 }

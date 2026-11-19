@@ -1,16 +1,14 @@
-import { useEffect, useRef, type FormEvent } from 'react'
+import { RequestError } from '../../../components/ui/RequestError'
+import { type FormEvent } from 'react'
 import { ArrowUpRight, LoaderCircle } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { Button } from '../../../components/ui/Button'
 import { TextField } from '../../../components/ui/TextField'
-import { ApiError } from '../../../lib/http'
 import { useLogin } from '../hooks/useLogin'
 
 export function LoginForm() {
   const mutation = useLogin()
   const navigate = useNavigate()
-  const errorRef = useRef<HTMLDivElement>(null)
-  useEffect(() => { if (mutation.error) errorRef.current?.focus() }, [mutation.error])
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -22,9 +20,7 @@ export function LoginForm() {
 
   return (
     <form onSubmit={submit} className="mt-7 space-y-5" aria-busy={mutation.isPending}>
-      {mutation.error && <div ref={errorRef} role="alert" tabIndex={-1} className="rounded-xl border border-danger p-4 text-sm text-danger">
-        {mutation.error instanceof ApiError ? mutation.error.message : 'Could not reach the server. Check your connection and try again.'}
-      </div>}
+      <RequestError error={mutation.error} fallback="Could not reach the server. Please try again." />
       <fieldset disabled={mutation.isPending} className="space-y-5">
         <TextField label="Email address" name="email" type="email" required maxLength={254} autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="you@example.com" />
         <TextField label="Password" name="password" type="password" required maxLength={128} autoComplete="current-password" placeholder="Your password" />

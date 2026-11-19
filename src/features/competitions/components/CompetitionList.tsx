@@ -1,5 +1,4 @@
 import { Plus } from 'lucide-react'
-import { useLocation } from 'react-router'
 import { Button, ButtonLink } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { useCompetitions } from '../hooks/useCompetitions'
@@ -8,12 +7,9 @@ import { CompetitionListItem } from './CompetitionListItem'
 
 export function CompetitionList() {
   const query = useCompetitions()
-  const { state } = useLocation()
-  const saved = state?.draftSaved === true
   const competitions = query.data?.competitions
   return (
     <section aria-labelledby="competition-library-title" className="mt-12">
-      {saved && <p role="status" className="mb-6 rounded-xl border border-success bg-surface px-5 py-4 text-sm text-success">Your draft has been saved.</p>}
       <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 id="competition-library-title" className="text-2xl font-semibold tracking-tight">Your competitions</h2>

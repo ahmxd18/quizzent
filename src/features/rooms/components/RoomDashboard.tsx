@@ -46,7 +46,7 @@ export function RoomDashboard({ details, disconnected, refreshing, onRefresh }: 
       {admittedCount} {admittedCount === 1 ? 'guest' : 'guests'} made the starting roster.
     </p>}
     <div className="flex flex-wrap gap-3">
-      <Button variant="secondary" size="sm" disabled={refreshing || disconnected} onClick={onRefresh}>{refreshing ? 'Refreshing…' : 'Refresh participants'}</Button>
+      {open && <Button variant="secondary" size="sm" disabled={refreshing || disconnected} onClick={onRefresh}>{refreshing ? 'Refreshing…' : 'Refresh participants'}</Button>}
       {inLobby && <Button variant="ghost" size="sm" disabled={disconnected} onClick={() => setClosing(true)}>Close room</Button>}
       {open && !inLobby && <CancelCompetition roomId={room.id} disconnected={disconnected} />}
     </div>

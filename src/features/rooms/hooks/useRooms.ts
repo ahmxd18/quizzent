@@ -4,6 +4,7 @@ import { ApiError } from '../../../lib/http'
 import { sessionKey } from '../../auth/hooks/useSession'
 import { cancelRoom, closeRoom, createInvitation, createRoom, getRoom, listRooms, renewInvitation } from '../api/rooms'
 import { roomPollMs, roomRequestFailed } from './useRoomConnection'
+import { notify } from '../../../lib/notifications'
 
 function useOwnerSession(error: Error | null) {
   const client = useQueryClient()
@@ -36,8 +37,8 @@ export function useRoomActions(id: string) {
   const refresh = () => client.invalidateQueries({ queryKey: ['rooms'] })
   const onError = (error: Error) => { if (error instanceof ApiError && error.status === 401) client.setQueryData(sessionKey, null) }
   return {
-    close: useMutation({ mutationFn: () => closeRoom(id), retry: false, onSuccess: refresh, onError }),
-    cancel: useMutation({ mutationFn: (reason: string) => cancelRoom(id, reason), networkMode: 'always', retry: false, onSuccess: refresh, onError }),
+    close: useMutation({ mutationFn: () => closeRoom(id), retry: false, onSuccess: async () => { await refresh(); notify.info('Room closed.') }, onError }),
+    cancel: useMutation({ mutationFn: (reason: string) => cancelRoom(id, reason), networkMode: 'always', retry: false, onSuccess: async () => { await refresh(); notify.info('Competition cancelled.') }, onError }),
     invite: useMutation({ mutationFn: (reference: string) => createInvitation(id, reference), retry: false, gcTime: 0, onSuccess: refresh, onError }),
     renew: useMutation({ mutationFn: (invitationId: string) => renewInvitation(id, invitationId), retry: false, gcTime: 0, onSuccess: refresh, onError }),
   }
