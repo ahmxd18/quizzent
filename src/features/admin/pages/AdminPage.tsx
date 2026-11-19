@@ -9,11 +9,11 @@ import type { AdminAction } from '../api/admin'
 import { AdminActionDialog } from '../components/AdminActionDialog'
 import { AdminAccounts, AdminAudit, AdminRooms } from '../components/AdminLists'
 import { useAdminOverview } from '../hooks/useAdmin'
+import { notify } from '../../../lib/notifications'
 
 function AdminDashboard({ userId }: { userId: string }) {
   const [search, setSearch] = useState('')
   const [selection, setSelection] = useState<AdminAction | null>(null)
-  const [message, setMessage] = useState('')
   const query = useAdminOverview(userId, search)
 
   function filter(event: FormEvent<HTMLFormElement>) {
@@ -33,7 +33,6 @@ function AdminDashboard({ userId }: { userId: string }) {
         placeholder="Name, email, room title, or code" />
       <Button type="submit" variant="secondary">Search</Button>
     </form>
-    {message && <p role="status" className="text-sm font-semibold text-brand">{message}</p>}
     {query.isError ? <div className="space-y-3">
       <RequestError error={query.error} />
       <Button variant="secondary" onClick={() => { void query.refetch() }}>Retry admin overview</Button>
@@ -43,7 +42,7 @@ function AdminDashboard({ userId }: { userId: string }) {
       <AdminAudit actions={query.data.actions} />
     </> : <p role="status" className="text-sm text-muted">Loading admin overview…</p>}
     {selection && <AdminActionDialog action={selection} dismiss={() => setSelection(null)}
-      onSaved={saved => { setMessage(saved); setSelection(null) }} />}
+      onSaved={saved => { notify.success(saved); setSelection(null) }} />}
   </div>
 }
 

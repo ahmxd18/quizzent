@@ -21,6 +21,7 @@ export function AdminActionDialog({ action, dismiss, onSaved }: {
     return current
   })
   const cancelling = action.kind === 'cancelRoom'
+  const needsPassword = action.kind === 'role' || (action.kind === 'status' && action.value === 'suspended')
   const weeklyLimit = limit === '' ? null : Number(limit)
   const invalidLimit = weeklyLimit !== null && (!/^\d+$/.test(limit) || !Number.isInteger(weeklyLimit) || weeklyLimit > 2147483647)
   let verb = 'Cancel competition'
@@ -39,7 +40,7 @@ export function AdminActionDialog({ action, dismiss, onSaved }: {
   }
 
   return <ConfirmDialog open title={verb} description={description} confirmLabel={verb} cancelLabel="Go back"
-    pending={mutation.isPending} confirmDisabled={(cancelling && !reason.trim()) || (action.kind === 'role' && !password) || invalidLimit} onCancel={dismiss}
+    pending={mutation.isPending} confirmDisabled={(cancelling && !reason.trim()) || (needsPassword && !password) || invalidLimit} onCancel={dismiss}
     onConfirm={() => {
       pendingPassword.current = password
       mutation.mutate({ action, reason: reason.trim(), restricted, weeklyLimit }, { onSuccess: result => onSaved(result.message) })
@@ -50,7 +51,7 @@ export function AdminActionDialog({ action, dismiss, onSaved }: {
       <RequestError error={mutation.error} />
       {cancelling && <TextField label="Reason for cancelling" value={reason} disabled={mutation.isPending}
         maxLength={200} onChange={event => setReason(event.target.value)} />}
-      {action.kind === 'role' && <TextField label="Your current password" type="password" autoComplete="current-password"
+      {needsPassword && <TextField label="Your current password" type="password" autoComplete="current-password"
         value={password} maxLength={128} disabled={mutation.isPending} onChange={event => setPassword(event.target.value)} />}
       {action.kind === 'hosting' && <>
         <label className="flex items-center gap-2 text-sm font-semibold">

@@ -28,10 +28,10 @@ export function AdminAccounts({ accounts, viewerId, select }: { accounts: Accoun
               </div>
             </div>
             {!own && <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={() => select({ ...target, kind: 'status', value: suspend ? 'suspended' : 'active' })}>
+              <Button variant="secondary" size="sm" disabled={account.role === 'superadmin'} onClick={() => select({ ...target, kind: 'status', value: suspend ? 'suspended' : 'active' })}>
                 {suspend ? 'Suspend' : 'Reactivate'}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => select({ ...target, kind: 'role', value: promote ? 'superadmin' : 'organiser' })}>
+              <Button variant="ghost" size="sm" disabled={promote && account.status === 'suspended'} onClick={() => select({ ...target, kind: 'role', value: promote ? 'superadmin' : 'organiser' })}>
                 {promote ? 'Make superadmin' : 'Make organiser'}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => select({ ...target, kind: 'hosting', restricted: account.hostingRestricted, weeklyLimit: account.weeklyHostingLimit })}>
