@@ -25,10 +25,15 @@ export function MultiSelect({ label, options, selected, onChange, search, onSear
     return () => document.removeEventListener('pointerdown', close)
   }, [open])
 
-  const choices = [...selected, ...options.filter(option => !selected.some(item => item.value === option.value))]
+  const choices = [...options, ...selected.filter(option => !options.some(item => item.value === option.value))]
   return <div ref={root} className="relative space-y-2"
     onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus() } }}
-    onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
+    onBlur={() => {
+      // A label click moves focus before the browser activates its checkbox.
+      requestAnimationFrame(() => {
+        if (!root.current?.contains(document.activeElement)) setOpen(false)
+      })
+    }}>
     <span id={`${id}-label`} className="block text-sm font-semibold">{label}</span>
     <button ref={trigger} type="button" aria-labelledby={`${id}-label ${id}-value`} aria-expanded={open}
       aria-controls={`${id}-panel`} onClick={() => setOpen(!open)}
@@ -40,7 +45,7 @@ export function MultiSelect({ label, options, selected, onChange, search, onSear
       <div role="group" aria-labelledby={`${id}-label`} className="max-h-52 space-y-1 overflow-y-auto">
         {choices.map(option => {
           const checked = selected.some(item => item.value === option.value)
-          return <label key={option.value} className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm hover:bg-brand-soft">
+          return <label key={option.value} className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-2 text-sm hover:bg-brand-soft">
             <input type="checkbox" checked={checked} className="mt-1 shrink-0 accent-brand"
               onChange={() => onChange(checked ? selected.filter(item => item.value !== option.value) : [...selected, option])} />
             <span className="min-w-0 break-words">{option.label}</span>
