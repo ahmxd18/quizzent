@@ -23,6 +23,8 @@ export function AdminAccounts({ accounts, viewerId, select }: { accounts: Accoun
               <div className="flex flex-wrap gap-2">
                 <Badge tone={promote ? 'neutral' : 'accent'}>{promote ? 'Organiser' : 'Superadmin'}</Badge>
                 <Badge tone={suspend ? 'brand' : 'neutral'}>{suspend ? 'Active' : 'Suspended'}</Badge>
+                {account.hostingRestricted && <Badge>Hosting restricted</Badge>}
+                {account.weeklyHostingLimit !== null && <Badge>{account.weeklyHostingLimit} rooms/week</Badge>}
               </div>
             </div>
             {!own && <div className="flex flex-wrap gap-2">
@@ -31,6 +33,9 @@ export function AdminAccounts({ accounts, viewerId, select }: { accounts: Accoun
               </Button>
               <Button variant="ghost" size="sm" onClick={() => select({ ...target, kind: 'role', value: promote ? 'superadmin' : 'organiser' })}>
                 {promote ? 'Make superadmin' : 'Make organiser'}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => select({ ...target, kind: 'hosting', restricted: account.hostingRestricted, weeklyLimit: account.weeklyHostingLimit })}>
+                Hosting policy
               </Button>
             </div>}
           </li>
@@ -61,7 +66,7 @@ export function AdminRooms({ rooms, select }: { rooms: ActiveRoom[]; select: Sel
   </section>
 }
 
-const auditTitles = { bootstrap: 'First superadmin added', role_changed: 'Role changed', status_changed: 'Status changed', room_cancelled: 'Competition cancelled' }
+const auditTitles = { bootstrap: 'First superadmin added', role_changed: 'Role changed', status_changed: 'Status changed', room_cancelled: 'Competition cancelled', hosting_changed: 'Hosting policy changed' }
 
 export function AdminAudit({ actions }: { actions: AuditEntry[] }) {
   return <section aria-labelledby="admin-audit" className="space-y-3">

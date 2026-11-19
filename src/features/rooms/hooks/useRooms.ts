@@ -26,7 +26,10 @@ export function useRoom(id: string) {
 export function useCreateRoom() {
   const client = useQueryClient()
   return useMutation({ mutationFn: createRoom, retry: false, onSuccess: () => client.invalidateQueries({ queryKey: ['rooms'] }),
-    onError: error => { if (error instanceof ApiError && error.status === 401) client.setQueryData(sessionKey, null) } })
+    onError: error => {
+      if (error instanceof ApiError && error.status === 401) client.setQueryData(sessionKey, null)
+      if (error instanceof ApiError && [403, 409].includes(error.status)) void client.invalidateQueries({ queryKey: ['rooms', 'list'] })
+    } })
 }
 export function useRoomActions(id: string) {
   const client = useQueryClient()

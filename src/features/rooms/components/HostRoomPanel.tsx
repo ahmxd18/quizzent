@@ -13,6 +13,8 @@ export function HostRoomPanel({ competitionId }: { competitionId: string }) {
   const navigate = useNavigate()
   const [mode, setMode] = useState<AdmissionMode>('open')
   const active = rooms.data?.rooms.find(room => room.status === 'open')
+  const policy = rooms.data?.hosting
+  const exceeded = policy?.weeklyLimit != null && policy.used >= policy.weeklyLimit
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (mutation.isPending) return
@@ -25,8 +27,13 @@ export function HostRoomPanel({ competitionId }: { competitionId: string }) {
   }
   return <Card className="mt-6 p-6 sm:p-8">
     <h2 className="text-xl font-semibold">Bring your guests together.</h2>
-    {rooms.isPending ? <p role="status" className="mt-4 text-sm text-muted">Checking your rooms…</p> : active ? <div className="mt-4"><p className="text-sm text-muted">You already have an open room: {active.title}.</p><ButtonLink to={`/organiser/rooms/${active.id}`} className="mt-5">Go to your open room</ButtonLink></div> : rooms.isError ? <div className="mt-4"><RequestError error={rooms.error} /><Button onClick={() => { void rooms.refetch() }} className="mt-4">Try again</Button></div> : <form onSubmit={submit} className="mt-5 space-y-5">
-      <RequestError error={mutation.error} />
+    {mutation.error && <div className="mt-4"><RequestError error={mutation.error} /></div>}
+    {policy?.restricted && <p className="mt-4 text-sm text-danger">Your account is restricted from opening new rooms.</p>}
+    {!policy?.restricted && policy?.weeklyLimit != null && <p className="mt-4 text-sm text-muted">
+      {exceeded ? 'Weekly hosting limit reached. ' : ''}{policy.used} of {policy.weeklyLimit} rooms opened this week.
+      Resets {new Date(policy.resetsAt).toLocaleString()}.
+    </p>}
+    {rooms.isPending ? <p role="status" className="mt-4 text-sm text-muted">Checking your rooms…</p> : active ? <div className="mt-4"><p className="text-sm text-muted">You already have an open room: {active.title}.</p><ButtonLink to={`/organiser/rooms/${active.id}`} className="mt-5">Go to your open room</ButtonLink></div> : rooms.isError ? <div className="mt-4"><RequestError error={rooms.error} /><Button onClick={() => { void rooms.refetch() }} className="mt-4">Try again</Button></div> : policy?.restricted || exceeded ? null : <form onSubmit={submit} className="mt-5 space-y-5">
       <fieldset disabled={mutation.isPending} className="space-y-3">
         <legend className="mb-3 text-sm font-semibold">Who can join?</legend>
         {(['open', 'invitation'] as const).map(value => <label key={value} className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${mode === value ? 'border-brand bg-brand-soft' : 'border-control'}`}>

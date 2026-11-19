@@ -17,7 +17,7 @@ export type InvitationLink = { invitation: { id: string; reference: string }; to
 const roomPath = (id: string) => `/api/rooms/${encodeURIComponent(id)}`
 export const roomRequestTimeout = 3500
 
-export const listRooms = () => getJson<{ rooms: Room[] }>('/api/rooms')
+export const listRooms = () => getJson<{ rooms: Room[]; hosting: { restricted: boolean; weeklyLimit: number | null; used: number; resetsAt: string } }>('/api/rooms')
 export const getRoom = (id: string) => getJson<RoomDetails>(roomPath(id), roomRequestTimeout)
 export const createRoom = (input: { competitionId: string; admissionMode: AdmissionMode; lobbySeconds: number; minReady: number }) => postJson<{ room: Room }>('/api/rooms', input)
 export const closeRoom = (id: string) => postJson<{ message: string }>(`${roomPath(id)}/close`, {})

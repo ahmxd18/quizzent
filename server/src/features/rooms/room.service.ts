@@ -4,6 +4,7 @@ import { inTransaction } from '../../lib/transaction.js'
 import { RoomError } from './room.error.js'
 import { roomColumns, type Room } from './room.queries.js'
 import { publishRoomResults } from '../results/publish-results.js'
+import { readHostingPolicy } from './hosting-policy.js'
 
 const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -35,16 +36,24 @@ export async function getOwnedRoom(database: Pool, ownerId: string, roomId: stri
 export async function createRoom(database: Pool, ownerId: string, competitionId: string, admissionMode: 'open' | 'invitation', rules = { lobbySeconds: 60, minReady: 2 }) {
   try {
     const id = await inTransaction(database, async client => {
+      // Opening rooms and changing policy both lock this account, so the last slot can only be used once.
+      await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [ownerId])
       const { rows: [competition] } = await client.query('SELECT status FROM competitions WHERE id = $1 AND organiser_id = $2 FOR UPDATE', [competitionId, ownerId])
       if (!competition) throw new RoomError(404, 'Competition not found.')
       if (competition.status !== 'published') throw new RoomError(409, 'Publish the competition before opening a room.')
+      const { rows: [clock] } = await client.query<{ now: Date }>('SELECT clock_timestamp() AS now')
+      const policy = await readHostingPolicy(client, ownerId, clock.now)
+      if (policy.restricted) throw new RoomError(403, 'Your account is restricted from opening new rooms.')
+      if (policy.weeklyLimit !== null && policy.used >= policy.weeklyLimit) {
+        throw new RoomError(409, 'You have reached your weekly hosting limit.')
+      }
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = Array.from({ length: 8 }, () => alphabet[randomInt(alphabet.length)]).join('')
         const lobbyEndsAt = new Date(Date.now() + rules.lobbySeconds * 1000)
         const { rows } = await client.query<{ id: string }>(
-          `INSERT INTO rooms (competition_id, organiser_id, code, admission_mode, min_ready, lobby_ends_at)
-           VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (code) DO NOTHING RETURNING id`,
-          [competitionId, ownerId, code, admissionMode, rules.minReady, lobbyEndsAt],
+          `INSERT INTO rooms (competition_id, organiser_id, code, admission_mode, min_ready, lobby_ends_at, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (code) DO NOTHING RETURNING id`,
+          [competitionId, ownerId, code, admissionMode, rules.minReady, lobbyEndsAt, clock.now],
         )
         if (rows[0]) return rows[0].id
       }

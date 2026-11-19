@@ -1,4 +1,5 @@
 import express from 'express'
+import { rateLimit } from 'express-rate-limit'
 import type { Pool } from 'pg'
 import { z } from 'zod'
 import { readSessionToken, requireSameOriginRequest, requireSession } from '../auth/session.http.js'
@@ -6,10 +7,12 @@ import type { SessionUser } from '../auth/session.service.js'
 import type { RoomChanged } from '../lobby/lobby.server.js'
 import { noStore, validateBody } from '../rooms/room.http.js'
 import { cancelRoomSchema } from '../rooms/room.schema.js'
-import { cancelAdminRoom, changeAccount, inspectAdminOverview } from './admin.service.js'
+import { cancelAdminRoom, changeAccount, inspectAdminOverview, setHostingPolicy } from './admin.service.js'
+import { directoryFilters, readDirectory } from './directory.js'
 
 const statusSchema = z.strictObject({ status: z.enum(['active', 'suspended']) })
-const roleSchema = z.strictObject({ role: z.enum(['organiser', 'superadmin']) })
+const roleSchema = z.strictObject({ role: z.enum(['organiser', 'superadmin']), password: z.string().min(1).max(128) })
+const hostingSchema = z.strictObject({ restricted: z.boolean(), weeklyLimit: z.number().int().min(0).max(2147483647).nullable() })
 const searchSchema = z.string().trim().max(100).transform(value => value.toLowerCase())
 
 export function createAdminRouter(database: Pool, roomChanged?: RoomChanged) {
@@ -32,13 +35,31 @@ export function createAdminRouter(database: Pool, roomChanged?: RoomChanged) {
     if (!search.success) { response.status(400).json({ message: 'Use at most 100 characters for search.' }); return }
     response.json(await inspectAdminOverview(database, search.data))
   })
+  router.get('/directory', async (request, response) => {
+    const filters = directoryFilters.safeParse(request.query)
+    if (!filters.success) {
+      response.status(400).json({ message: filters.error.issues[0]?.message ?? 'Invalid directory filters.' })
+      return
+    }
+    response.json(await readDirectory(database, filters.data))
+  })
   router.put('/users/:id/status', validateBody(statusSchema), async (request, response) => {
     await changeAccount(database, readSessionToken(request), String(request.params.id).toLowerCase(), { field: 'status', value: response.locals.input.status })
     response.json({ message: 'Account status saved.' })
   })
-  router.put('/users/:id/role', validateBody(roleSchema), async (request, response) => {
-    await changeAccount(database, readSessionToken(request), String(request.params.id).toLowerCase(), { field: 'role', value: response.locals.input.role })
+  const roleLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false,
+    keyGenerator: (_request, response) => (response.locals.user as SessionUser).id,
+    message: { message: 'Too many role verification attempts. Try again later.' },
+  })
+  router.put('/users/:id/role', validateBody(roleSchema), roleLimit, async (request, response) => {
+    const { role, password } = response.locals.input as z.infer<typeof roleSchema>
+    await changeAccount(database, readSessionToken(request), String(request.params.id).toLowerCase(), { field: 'role', value: role, password })
     response.json({ message: 'Account role saved.' })
+  })
+  router.put('/users/:id/hosting', validateBody(hostingSchema), async (request, response) => {
+    await setHostingPolicy(database, readSessionToken(request), String(request.params.id).toLowerCase(), response.locals.input)
+    response.json({ message: 'Hosting policy saved.' })
   })
   router.post('/rooms/:id/cancel', validateBody(cancelRoomSchema), async (request, response) => {
     const roomId = String(request.params.id).toLowerCase()

@@ -16,6 +16,7 @@ import { RoomEntryPage } from '../features/rooms/pages/RoomEntryPage'
 const loadGuestRoom = async () => ({ Component: (await import('../features/rooms/pages/GuestRoomPage')).GuestRoomPage })
 const loadOrganiserRoom = async () => ({ Component: (await import('../features/rooms/pages/OrganiserRoomPage')).OrganiserRoomPage })
 const loadAdmin = async () => ({ Component: (await import('../features/admin/pages/AdminPage')).AdminPage })
+const loadAdminDirectory = async () => ({ Component: (await import('../features/admin/pages/AdminDirectoryPage')).AdminDirectoryPage })
 
 // Data-router mode enables the editor's supported navigation blocker.
 const router = createBrowserRouter(createRoutesFromElements(
@@ -28,6 +29,7 @@ const router = createBrowserRouter(createRoutesFromElements(
     <Route path="signup" element={<SignupPage />} />
     <Route element={<RequireSession />}>
       <Route path="admin" lazy={loadAdmin} />
+      <Route path="admin/directory" lazy={loadAdminDirectory} />
       <Route path="organiser" element={<OrganiserPage />} />
       <Route path="organiser/competitions/new" element={<CreateCompetitionPage />} />
       <Route path="organiser/competitions/:id/edit" element={<EditCompetitionPage />} />
