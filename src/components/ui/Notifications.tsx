@@ -1,30 +1,49 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, CircleAlert, Info, X } from 'lucide-react'
+import { Check, CircleAlert, Info } from 'lucide-react'
 import { notificationStore, type Notification } from '../../lib/notifications'
 
 const tones = {
-  success: { icon: Check, style: 'border-success text-success', duration: 4500 },
-  error: { icon: CircleAlert, style: 'border-danger text-danger', duration: 8000 },
-  info: { icon: Info, style: 'border-brand text-brand', duration: 5500 },
+  success: { icon: Check, iconStyle: 'bg-success/10 text-success', line: 'bg-success', label: 'Success', duration: 4500 },
+  error: { icon: CircleAlert, iconStyle: 'bg-danger/10 text-danger', line: 'bg-danger', label: 'Error', duration: 8000 },
+  info: { icon: Info, iconStyle: 'bg-brand-soft text-brand', line: 'bg-brand', label: 'Information', duration: 5500 },
 }
 
 function Toast({ item }: { item: Notification }) {
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
-  const { icon: Icon, style, duration } = tones[item.tone]
+  const lineRef = useRef<HTMLSpanElement>(null)
+  const countdown = useRef<Animation | null>(null)
+  const { icon: Icon, iconStyle, line, label, duration } = tones[item.tone]
   useEffect(() => {
-    if (hovered || focused) return
-    const timer = window.setTimeout(() => notificationStore.dismiss(item.id), duration)
-    return () => window.clearTimeout(timer)
-  }, [duration, hovered, focused, item.id])
-  return <div className={`pointer-events-auto flex items-start gap-3 rounded-xl border bg-surface p-4 shadow-card ${style}`}
+    const animation = lineRef.current?.animate(
+      [{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }],
+      { duration, easing: 'linear', fill: 'forwards' },
+    )
+    if (!animation) return
+    countdown.current = animation
+    animation.onfinish = () => notificationStore.dismiss(item.id)
+    return () => { animation.cancel(); countdown.current = null }
+  }, [duration, item.id])
+  useEffect(() => {
+    if (hovered || focused) countdown.current?.pause()
+    else countdown.current?.play()
+  }, [hovered, focused])
+  return <div className="toast-enter pointer-events-auto relative overflow-hidden rounded-2xl border border-outline bg-surface shadow-card"
     onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
     onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
-    <Icon aria-hidden="true" size={20} className="mt-0.5 shrink-0" />
-    <p role={item.tone === 'error' ? 'alert' : 'status'} className="min-w-0 flex-1 break-words text-sm">{item.message}</p>
-    <button type="button" className="grid size-8 shrink-0 place-items-center rounded-lg hover:bg-surface-strong"
-      aria-label="Dismiss notification" onClick={() => notificationStore.dismiss(item.id)}><X size={16} /></button>
+    <span role={item.tone === 'error' ? 'alert' : 'status'} className="sr-only">{item.message}</span>
+    <button type="button" className="flex w-full items-start gap-3 px-4 pb-5 pt-4 text-left transition-colors hover:bg-canvas focus-visible:outline-offset-[-4px]"
+      aria-label={`Dismiss notification: ${item.message}`} onClick={() => notificationStore.dismiss(item.id)}>
+      <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl ${iconStyle}`}><Icon aria-hidden="true" size={19} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-semibold tracking-wide text-muted">{label}</span>
+        <span className="mt-1 block break-words text-sm leading-relaxed text-foreground">{item.message}</span>
+      </span>
+    </button>
+    <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-surface-strong">
+      <span ref={lineRef} className={`block h-full w-full origin-left ${line}`} />
+    </span>
   </div>
 }
 
@@ -39,7 +58,7 @@ export function Notifications() {
   if (!items.length) return null
   // Native dialogs make the rest of the page inert. Place feedback within the active dialog.
   return createPortal(
-    <div aria-label="Notifications" className="pointer-events-none fixed inset-x-4 top-4 z-50 mx-auto flex max-w-md flex-col gap-3">
+    <div aria-label="Notifications" className="pointer-events-none fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3">
       {items.map(item => <Toast key={item.id} item={item} />)}
     </div>, host,
   )
