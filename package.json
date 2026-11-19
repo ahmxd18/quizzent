@@ -16,6 +16,7 @@
     "db:migrate": "node --env-file-if-exists=server/.env node_modules/node-pg-migrate/bin/node-pg-migrate.js up --migrations-dir server/migrations --no-verbose",
     "admin:bootstrap": "node --env-file-if-exists=server/.env --import tsx server/src/bootstrap-superadmin.ts",
     "test:db": "tsc -p server/tsconfig.test.json && node --env-file-if-exists=server/.env --import tsx --test server/tests/database-schema.test.ts",
+    "test:load": "tsc -p server/tsconfig.test.json && node --env-file-if-exists=server/.env --import tsx server/checks/load-room.ts",
     "test:server": "tsc -p server/tsconfig.test.json && node --env-file-if-exists=server/.env --import tsx --test --test-concurrency=1 server/tests/*.test.ts"
   },
   "dependencies": {
