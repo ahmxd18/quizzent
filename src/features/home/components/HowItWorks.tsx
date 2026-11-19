@@ -1,5 +1,6 @@
 import { ArrowRight, Flag, Hash, MousePointer2 } from 'lucide-react'
 import { ButtonLink } from '../../../components/ui/Button'
+import { useSession } from '../../auth/hooks/useSession'
 
 const steps = [
   { number: '01', icon: Hash, title: 'Find your room.', description: 'Get a code from your organiser. Pick a name and join the crew.' },
@@ -8,6 +9,7 @@ const steps = [
 ]
 
 export function HowItWorks() {
+  const { data: user, isPending } = useSession()
   return (
     <section aria-labelledby="how-heading" className="border-t border-outline pb-16 pt-10 sm:pb-20 sm:pt-12">
       <div className="flex flex-wrap items-end justify-between gap-5">
@@ -15,7 +17,7 @@ export function HowItWorks() {
           <p className="text-xs font-semibold tracking-widest text-muted uppercase">Simple by design</p>
           <h2 id="how-heading" className="mt-3 text-3xl font-semibold tracking-tight">Less setup. More game.</h2>
         </div>
-        <ButtonLink to="/signup" variant="ghost" size="sm">Bring your own questions <ArrowRight size={16} aria-hidden="true" /></ButtonLink>
+        {!isPending && <ButtonLink to={user ? '/organiser' : '/signup'} variant="ghost" size="sm">Bring your own questions <ArrowRight size={16} aria-hidden="true" /></ButtonLink>}
       </div>
       <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-10">
         {steps.map(({ number, icon: Icon, title, description }) => (

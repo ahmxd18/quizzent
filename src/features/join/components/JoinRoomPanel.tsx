@@ -5,8 +5,10 @@ import { Card } from '../../../components/ui/Card'
 import { TextField } from '../../../components/ui/TextField'
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
+import { useSession } from '../../auth/hooks/useSession'
 
 export function JoinRoomPanel() {
+  const { data: user, isPending } = useSession()
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
@@ -31,7 +33,7 @@ export function JoinRoomPanel() {
       </form>
       <div className="mt-8 border-t border-outline pt-5 text-center">
         <p className="text-sm text-muted">Want to be the one asking the questions?</p>
-        <ButtonLink to="/signup" variant="ghost" size="sm" className="mt-2">Become an organiser <ArrowUpRight aria-hidden="true" size={15} /></ButtonLink>
+        {!isPending && <ButtonLink to={user ? '/organiser' : '/signup'} variant="ghost" size="sm" className="mt-2">{user ? 'Go to my space' : 'Become an organiser'} <ArrowUpRight aria-hidden="true" size={15} /></ButtonLink>}
       </div>
     </Card>
   )

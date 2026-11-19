@@ -1,12 +1,9 @@
-import { Button, ButtonLink } from '../../../components/ui/Button'
-import { ApiError } from '../../../lib/http'
-import { useLogout } from '../../auth/hooks/useLogout'
+import { ButtonLink } from '../../../components/ui/Button'
 import type { SessionUser } from '../../auth/api/session'
 import { CompetitionList } from '../../competitions/components/CompetitionList'
 import { RoomList } from '../../rooms/components/RoomList'
 
 export function OrganiserOverview({ user }: { user: SessionUser }) {
-  const logout = useLogout()
   return (
     <div className="mx-auto max-w-5xl">
       <p className="text-sm font-semibold text-brand">Organiser space</p>
@@ -15,8 +12,6 @@ export function OrganiserOverview({ user }: { user: SessionUser }) {
       {user.role === 'superadmin' && <ButtonLink to="/admin" variant="secondary" className="mt-5">Admin controls</ButtonLink>}
       <RoomList />
       <CompetitionList />
-      {logout.error && <p role="alert" className="mt-6 text-sm text-danger">{logout.error instanceof ApiError ? logout.error.message : 'Could not log out. Check your connection and try again.'}</p>}
-      <Button variant="secondary" disabled={logout.isPending} onClick={() => logout.mutate()} className="mt-7">{logout.isPending ? 'Logging out…' : 'Log out'}</Button>
     </div>
   )
 }
