@@ -20,7 +20,7 @@ type SocketData = { access: LobbyAccess }
 
 const channel = (roomId: string) => `lobby:${roomId}`
 
-export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs = 8_000, warningMs = 5_000, isReady = () => true) {
+export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs = 8_000, warningMs = 5_000, isReady = () => true, onRoomChanged = () => {}) {
   const presence = new LobbyPresence(reconnectGraceMs)
   const readyLimit = createReadyLimit()
   const io = new Server<ClientEvents, ServerEvents, Record<never, never>, SocketData>(server, {
@@ -35,7 +35,7 @@ export function attachLobby(server: HttpServer, database: Pool, reconnectGraceMs
     },
   })
   let stopping = false
-  const notify = (roomId: string) => { io.to(channel(roomId)).emit('lobby:room-changed') }
+  const notify = (roomId: string) => { io.to(channel(roomId)).emit('lobby:room-changed'); onRoomChanged() }
   const start = createRoomStart(
     database,
     roomId => presence.participants(roomId).filter(participant => participant.ready).map(participant => participant.participantId),

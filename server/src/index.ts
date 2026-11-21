@@ -1,15 +1,10 @@
 import { createDatabasePool } from './database.js'
 import { createQuizzentServer } from './server.js'
+import { readRuntimeConfig } from './runtime-config.js'
 
-const port = Number(process.env.PORT ?? 3001)
-
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  throw new Error('PORT must be a whole number between 1 and 65535.')
-}
-
-// Bind locally while we develop. Deployment settings will come later.
+const { port, ...settings } = readRuntimeConfig()
 const database = createDatabasePool()
-const { start, close } = createQuizzentServer(database)
+const { start, close } = createQuizzentServer(database, undefined, undefined, settings)
 
 // Stop accepting requests before releasing the shared database connections.
 let stopping: Promise<void> | undefined
@@ -23,7 +18,7 @@ try {
   const cancelled = await start(port)
   if (!stopping) {
     if (cancelled > 0) console.log(`Cancelled ${cancelled} interrupted competition(s).`)
-    console.log(`Quizzent API listening at http://127.0.0.1:${port}`)
+    console.log(`Quizzent listening on ${settings.host}:${port}`)
   }
 } catch (error) {
   const code = (error as NodeJS.ErrnoException).code

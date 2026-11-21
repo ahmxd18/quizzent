@@ -184,8 +184,14 @@ FINISH AND PRESENT
 19. [ ] Free/minimal-cost deployment and portfolio documentation
     Target zero rupees for hosting. Compare current free-tier limits before choosing
     providers or creating accounts; consider a paid option only by separate agreement.
-    Add a developer portfolio footer link once the portfolio has a deployed URL.
-    Verify persistent connections, idle suspension, database limits, and outage behaviour.
+    [x] Add the developer footer link using a temporary GitHub destination.
+    [ ] Replace its destination when the portfolio has a deployed URL.
+    [x] Compare Render Free and Neon Free; prepare the hosting configuration.
+    [x] Serve the production React build through Express with document headers.
+    [x] Stop idle timeout-worker polling; add regression checks.
+    [x] Add real screenshots, architecture and interview notes.
+    [ ] Provision free resources and verify the live URL, TLS, proxy/client IP,
+        WebSockets, cold starts, quota behaviour and backup/restore.
     Add deployment configuration, production session settings, logs, and backup guidance.
     Keep the frontend and API deployment relationship explicit; Vite's proxy is dev-only.
     Finish README screenshots, architecture diagram, setup guide, and interview notes.
@@ -196,10 +202,10 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–17 and the hosting policy additions were merged through PRs #1–#15.
-Step 18 adds application hardening and repeatable load/browser checks on its own
-feature branch. All 77 server checks pass. The 30/50 competitor scenarios completed
-without errors; Edge and axe checks covered the full organiser/guest journey and
-shared UI regressions. See docs/mvp-hardening.md for measurements and limitations.
-Next: deployment and portfolio documentation (step 19), once this branch is merged.
-Production hosting has not yet been configured or validated.
+Steps 01–18 are merged through PR #16. The footer credit was pushed directly to
+main at the user’s request. Step 19 is in progress on codex/deployment-portfolio.
+Local hosting preparation passes 80 server checks and 30/50 competitor scenarios.
+The README, deployment guide and interview notes distinguish local evidence from
+hosted claims. No public deployment has been provisioned or verified yet.
+Next: review the deployment PR, create the free resources, then run the hosted
+verification and backup/restore checks in docs/deployment.md.

@@ -5,30 +5,31 @@ import { createApp } from './app.js'
 import { attachLobby } from './features/lobby/lobby.server.js'
 import { startTimeoutWorker } from './features/attempts/timeout-worker.js'
 import { cancelInterruptedRooms } from './features/rooms/cancellation.service.js'
+import type { ServerSettings } from './runtime-config.js'
 
-export function createQuizzentServer(database: Pool, reconnectGraceMs?: number, warningMs?: number) {
+export function createQuizzentServer(database: Pool, reconnectGraceMs?: number, warningMs?: number, settings: ServerSettings = {}) {
   let ready = false
   let stopping = false
   let startup: Promise<number> | undefined
   let shutdown: Promise<void> | undefined
-  let stopTimeouts: ReturnType<typeof startTimeoutWorker> | undefined
-  const app = createApp(database, (roomId, change) => lobby.roomChanged(roomId, change))
+  let timeoutWorker: ReturnType<typeof startTimeoutWorker> | undefined
+  const app = createApp(database, (roomId, change) => lobby.roomChanged(roomId, change), settings)
   const server = createServer((request, response) => {
     if (ready) return app(request, response)
     response.writeHead(503, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
     response.end(JSON.stringify({ message: 'Quizzent is starting. Please try again.' }))
   })
-  const lobby = attachLobby(server, database, reconnectGraceMs, warningMs, () => ready)
+  const lobby = attachLobby(server, database, reconnectGraceMs, warningMs, () => ready, () => timeoutWorker?.wake())
 
   async function start(port: number) {
     // Bind first so a second copy on the same port cannot cancel games on the live server.
     const listening = once(server, 'listening')
-    server.listen(port, '127.0.0.1')
+    server.listen(port, settings.host ?? '127.0.0.1')
     await listening
     if (stopping) return 0
     const cancelled = await cancelInterruptedRooms(database)
     if (!stopping) {
-      stopTimeouts = startTimeoutWorker(database)
+      timeoutWorker = startTimeoutWorker(database)
       ready = true
     }
     return cancelled
@@ -36,7 +37,7 @@ export function createQuizzentServer(database: Pool, reconnectGraceMs?: number, 
 
   async function close() {
     await startup?.catch(() => {})
-    await Promise.all([stopTimeouts?.(), lobby.close()])
+    await Promise.all([timeoutWorker?.stop(), lobby.close()])
   }
   return {
     server,

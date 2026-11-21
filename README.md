@@ -1,139 +1,106 @@
 # Quizzent
 
-A real-time online MCQ competition platform, built step by step as a learning and portfolio project.
+Real-time quiz competitions with server-controlled timing, guest participation and saved results.
 
-## Current status
+Built with **React, TypeScript, Express, PostgreSQL and Socket.IO** as a learning and portfolio project. Organisers publish MCQs, invite guests into a live lobby, and follow their progress. Guests need no account: each gets a private session and a stable participant record, separate from their nickname.
 
-Organisers can publish MCQ competitions, host a room, and see guest progress. Admitted guests answer one timed question at a time. When everyone finishes, Quizzent publishes the leaderboard and each guest can review their own answers. [Quiz results guide](docs/competition-runtime.md#results-and-organiser-progress)
+**Deployment status:** local MVP verified; free-hosting configuration is prepared. A public demo URL will be added after hosted verification. See the [deployment guide](docs/deployment.md).
 
-Organisers can cancel a running quiz with a reason. The server also cancels interrupted quizzes when it restarts. [Cancellation and recovery guide](docs/competition-runtime.md#cancellation-and-recovery)
+## In the app
 
-Superadmins can manage accounts, cancel open rooms, and review recent admin activity. [Superadmin setup guide](docs/superadmin-controls.md)
+![Quizzent overview](docs/images/overview-desktop.png)
 
-Follow [the ordered development plan](docs/development-plan.txt) for the next steps.
+| Organiser room | Guest question |
+| --- | --- |
+| <img src="docs/images/organiser-room-desktop.png" alt="Organiser room showing the invitation controls and joined guest" width="680"> | <img src="docs/images/guest-question-mobile.png" alt="Mobile quiz screen with a timed question and answer options" width="280"> |
 
-The frontend was scaffolded with `npm create vite@latest . -- --template react-ts --no-interactive`. Dependency versions are recorded in `package-lock.json`.
+Screenshots use disposable test data from the running application.
+
+## Features
+
+- Organiser signup/login, private draft library, four-option MCQ editing and immutable publication.
+- Open room codes or personal invitations, unique room nicknames, stable participant numbers and organiser references.
+- Live readiness with distinct guest counts across tabs, configurable lobby minimums and a five-second start warning.
+- Persisted question/option shuffles, per-question deadlines, immutable answers, safe retries and reconnect/timeout progression.
+- Shared-rank leaderboards and private answer reviews after everyone finishes; explicit cancellation and server-restart recovery.
+- Superadmin directory, filters/pagination, password-verified sensitive changes, suspension and hosting restrictions/weekly limits.
+- Responsive plum/citron UI, shared controls, accessible notifications and keyboard-aware dialogs.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    B[Browser: React + TanStack Query]
+    subgraph Node[One Node.js process]
+        E[Express: frontend + HTTP API]
+        S[Socket.IO: lobby and readiness]
+        W[Timeout and result worker]
+    end
+    P[(PostgreSQL)]
+    B -->|Same-origin HTTP and session cookie| E
+    B <-->|WebSocket| S
+    E -->|Validated, owner-scoped queries| P
+    S -->|Atomic roster and question assignment| P
+    S -->|Wake on committed room changes| W
+    W -->|Deadlines and result publication| P
+```
+
+PostgreSQL holds accounts, hashed session/invitation secrets, competitions, room membership, assignments, answers and results. Lobby presence and request budgets live in memory, so this MVP runs **one backend process**. The worker stops polling when there are no running competitions.
+
+The browser countdown is display only. The server samples database time after locking an attempt, resolves an answer or timeout once, and advances progress in the same transaction. A request ID makes an accepted submission safe to retry. Room locks and unique constraints protect concurrent admission, capacity and hosting quotas.
 
 ## Run locally
 
-Use a supported Node.js version compatible with Vite (22.12+ or 24+).
+Use the Node.js version in `.node-version` and PostgreSQL 18 (Postgres.app works on macOS).
 
-```sh
-npm ci
-npm run dev
-```
+1. Clone this repository and run `npm ci`.
+2. Copy `server/.env.example` to `server/.env` and configure your **local** `DATABASE_URL`. Keep it out of version control.
+3. Start PostgreSQL, then run `npm run db:migrate`.
+4. Run `npm run dev:server` in one terminal and `npm run dev` in another. Open Vite's printed URL.
 
-In a second terminal, from the same project folder:
+Create an organiser at `/signup`, log in, create a draft, add questions and publish it. Open a room, then use a separate browser profile to join by code and mark yourself ready. Superadmin provisioning is a separate local command, not a public signup role: [admin guide](docs/superadmin-controls.md).
 
-```sh
-npm run dev:server
-```
+The API defaults to `127.0.0.1:3001`; `GET /api/health` checks the process, not PostgreSQL. Vite proxies `/api` and `/socket.io` during development. Production Express serves the built frontend on the same origin. [Database setup](docs/postgresql-setup.md) · [Authentication](docs/authentication.md) · [Competition lifecycle](docs/competition-runtime.md)
 
-The API runs at `http://127.0.0.1:3001`. Open `/api/health` on the frontend's Vite URL to check the development proxy, or call the API directly:
+## Verification
 
-```sh
-curl http://127.0.0.1:3001/api/health
-```
+| Command | Checks |
+| --- | --- |
+| `npm run build` | Production React assets and compiled server |
+| `npm run lint` | Static code checks |
+| `npm run test:server` | 80 schema, API, security, concurrency, timing and hosting checks |
+| `npm run test:load` | Real HTTP/WebSocket scenarios with 30 and 50 competitors |
+| `npm run test:browser` | Edge desktop/touch flows, axe scans, built-frontend smoke check and screenshots |
 
-Expected response: `{"status":"ok","service":"quizzent-api"}`. This checks the API process only; it does not check PostgreSQL.
+Database checks use disposable PostgreSQL schemas; run them against a development database. Browser checks use installed Edge by default; set `BROWSER_CHANNEL=chrome` or `BROWSER_EXECUTABLE` for another compatible installed Chromium browser. Build first so the built-frontend check can find `dist/`.
 
-The API now requires `DATABASE_URL`: copy `server/.env.example` to `server/.env` and configure your local credentials if not already set up. Node loads this ignored file for the backend. Start Postgres.app and apply migrations before signup requests. If you change `PORT`, also update Vite's proxy target. Never put backend secrets in frontend `VITE_` variables.
+The latest local deployment-preparation scenarios completed with **no errors at 30 or 50 competitors**. At 50 competitors, answer-submission p95 was **25 ms**: 95% of sampled submissions finished within that time. All 50 deliberately unanswered final questions timed out and produced the expected saved results. This is a short local scenario on Node 26.5.0 with a five-connection PostgreSQL pool, not a hosted capacity or availability claim. The [hardening report](docs/mvp-hardening.md) preserves the original Step 18 measurements and security review.
 
-```sh
-npm run lint       # Check for code issues
-npm run build      # Build the frontend and type-check/compile the backend
-npm run preview    # Preview the frontend build only
-npm run start:server # Run the compiled backend after building
-npm run db:check    # Verify the local PostgreSQL connection
-npm run db:migrate  # Apply pending database migrations
-npm run test:db     # Check migration/constraints in an isolated temporary schema
-npm run test:server # Run schema, auth, competition, and room admission tests
-```
+## Deployment and limits
 
-Vite's `/api` proxy is local tooling, not a production API gateway. `preview` is also a local preview, not a deployment server. Production hosting and API routing will be configured in the deployment step; the backend currently binds to this computer only.
+The proposed ₹0 demo uses one Render Free web service and Neon Free PostgreSQL. `render.yaml` configures manual releases, a health check, migrations before startup and secret injection. See [deployment instructions and pending hosted checks](docs/deployment.md); free services can sleep or suspend at quota limits.
 
-## Structure
+Published competition content is frozen through the API. Guest names are not verified identities. A copied session cookie is a bearer credential until expiry/revocation. This MVP does not provide MFA, password recovery, distributed rate limits, proctoring or validated multi-room hosted capacity. Restarting/redeploying during a running quiz cancels it by design; deploy between competitions.
+
+## Code and documentation
 
 ```text
-src/
-  App.tsx              Root route composition
-  main.tsx             React entry point
-  app/                 Providers, routes, site shell, and not-found page
-  components/ui/       Generic Button, TextField, Card, and Badge
-  components/layout/   Generic PageContainer
-  features/home/       Homepage sections and page composition
-  features/join/       Public room-code entry page
-  features/auth/       Signup/login forms, session hooks, and protected routing
-  features/organiser/  Protected organiser overview
-  features/competitions/ Draft library, shared editor, API calls, and hooks
-  features/questions/  Question workspace, editor, cards, API calls, and hooks
-  features/rooms/      Host dashboard, guest admission, and waiting room
-  styles/              Named colour tokens and shared base styles
-  index.css            Stylesheet imports
-  lib/query-client.ts  Shared TanStack Query cache
-  lib/http.ts          Shared Axios JSON requests and API errors
-server/
-  src/app.ts           Express routes
-  src/index.ts         Port configuration and local server startup
-  tsconfig.json        Backend TypeScript build settings
-  .env.example         Optional backend environment settings
-  src/database.ts      PostgreSQL connection pool factory
-  src/check-database.ts One-off database connection check
-  migrations/          Numbered SQL changes
-  tests/               Database integration tests
-docs/
-  project-decisions.md Confirmed scope and implementation notes
-  development-plan.txt Ordered milestones and checks
-  postgresql-setup.md   Local setup and plain-language database explanations
-  database-schema.md    Account/session tables and migration commands
-  authentication.md    Signup/login API, hashing, cookies, sessions and frontend flow
-  competition-runtime.md Readiness, timed answers, results and outage handling
-  competition-drafts.md Draft API, ownership, database fields, and editor behavior
-  questions-and-publication.md Question IDs, transactions, publishing, and frozen content
-  room-admission.md    Room codes, invitations, participant identity, and cookies
-  frontend-design.md    Palette options, contrast checks, and component boundaries
+src/app/                     Routing, providers and application shell
+src/components/              Generic UI and layout primitives
+src/features/<feature>/      Feature components, pages, API calls and hooks
+src/styles/                  Named colour tokens and shared base styles
+server/src/features/         Auth, competitions, rooms, lobby, attempts, results, admin
+server/migrations/           Versioned PostgreSQL schema changes
+server/tests/                Isolated database/API and regression checks
+server/checks/               Load scenarios and browser walkthrough
 ```
 
-Keep generic primitives in `src/components/`. Feature-specific UI goes in `src/features/<feature>/components/`, with route-level composition in that feature's `pages/`. Application-wide routing/header/footer live in `src/app/`. Shared components must not import features. See the [frontend design guide](docs/frontend-design.md).
+Generic components do not import feature code. Runtime input is validated separately from TypeScript types. Changes normally use focused feature-branch commits and reviewed pull requests.
 
-Public routes include `/`, `/join`, `/join/:code`, `/rooms/:id`, `/login`, and `/signup`. Organiser routes live under `/organiser` and require login, including `/organiser/rooms/:id`. Hosting must eventually serve `index.html` for frontend routes while preserving `/api` handling; the Vite development server already supports direct route loading.
+- [Development plan](docs/development-plan.txt)
+- [Schema and migrations](docs/database-schema.md)
+- [Frontend design and component conventions](docs/frontend-design.md)
+- [Deployment and operations](docs/deployment.md)
+- [Resume wording, demo flow and interview notes](docs/portfolio.md)
 
-To try authentication, create an account at `/signup`, continue to `/login`, and enter its email and password. Refresh `/organiser` to check session restoration, then log out. API clients testing login/logout must send `X-Quizzent-Request: 1` and retain the response cookie. See the [login guide](docs/authentication.md#login-and-sessions).
-
-From `/organiser`, choose Create your first competition. Save a title, optional description, and question time (default 10 seconds, allowed 5–120). The draft appears in your library; select Edit draft to update it. Saving does not publish or open a room. See the [draft guide](docs/competition-drafts.md).
-
-Choose Manage questions from the competition details. Save each question with four distinct options and one correct answer. Review before choosing Publish competition: publication permanently locks content/settings through the API and does not open a live room. See the [questions and publication guide](docs/questions-and-publication.md).
-
-Choose **Host room** on a published competition. Share the room code if open admission is allowed, or create a personal invitation with a reference you recognise. From another browser profile, join and mark yourself ready to see the organiser roster update automatically. See the [room admission guide](docs/room-admission.md) and the [live lobby guide](docs/competition-runtime.md#lobby-and-readiness).
-
-## Stack
-
-- Frontend: React, Vite, TypeScript, Tailwind CSS, TanStack Query, React Router, Lucide icons.
-- Backend: Node.js, Express, TypeScript, PostgreSQL via pg, and Socket.IO.
-- Hosting: aim for free or minimal cost; select providers when deployment is needed.
-
-## A few explanations
-
-- **Vite** runs the development server and prepares browser assets for deployment.
-- **TypeScript** checks types before the application runs; external input still needs runtime validation.
-- **Tailwind theme tokens** in `src/styles/tokens.css` create utilities such as `text-brand` and `bg-canvas`. Define colours there instead of repeating raw values in components. This uses [Tailwind's Vite plugin](https://tailwindcss.com/docs/installation/using-vite).
-- **React Router** maps URLs to page components without a full-page reload. `Outlet` renders the current page inside the shared header/footer. Route changes update the page title and move focus to the new main content.
-- **TanStack Query** manages account mutations and the current-session query. `QueryClientProvider` makes its shared cache available throughout React. Axios sends the HTTP requests.
-- **PostgreSQL** stores related data in tables, roughly like linked spreadsheets. See the [local PostgreSQL guide](docs/postgresql-setup.md) for setup and the [schema guide](docs/database-schema.md) for the first tables.
-- **Express** defines HTTP routes. `GET /api/health` responds with JSON, while unknown routes return a JSON 404. [Express introduction](https://expressjs.com/en/starter/hello-world/).
-- **tsx** runs backend TypeScript during development. The build uses `tsc` to produce ordinary JavaScript in `server/dist/`. That is why `index.ts` imports `./app.js`: the import must still work after compilation.
-- **NodeNext** tells TypeScript to follow Node's module rules for the backend, rather than the frontend bundler's rules.
-- **The Vite proxy** forwards local `/api` requests to Express so the frontend can use relative URLs. It does not connect the database. [Vite proxy documentation](https://vite.dev/config/server-options.html#server-proxy).
-- **Node's environment-file flag** loads `server/.env` if it exists, without requiring a dotenv dependency. [Node CLI documentation](https://nodejs.org/api/cli.html#--env-file-if-existsfile).
-
-## Development workflow
-
-The initial commit on `main` contains setup only. Continue work on a separate feature branch and merge reviewed changes through pull requests. Keep changes small and focused on one feature at a time.
-
-Foundation, signup, login, drafts, and question editing/publication were merged through [PRs #1–#5](https://github.com/ahmxd18/quizzent/pulls?q=is%3Apr+is%3Amerged). Finish and merge each feature before starting its successor from main.
-
-Explain unfamiliar TypeScript, Socket.IO, and PostgreSQL concepts briefly as they appear. Use short, natural code comments where they clarify a decision. Never commit real credentials or `.env` files.
-
-## MVP verification
-
-Run `npm run test:server` for the database/security/concurrency suite, `npm run test:load` for the 30/50 competitor scenarios, and `npm run test:browser` for the Edge UI and axe accessibility checks. These use disposable database schemas; configure a local development database first. The browser command uses installed Microsoft Edge, with optional Chrome/executable overrides. See the [MVP hardening report](docs/mvp-hardening.md) for setup, measured results and deployment boundaries.
+Developed by [ahmxd18](https://github.com/ahmxd18). The footer currently links to this profile; it can point to the professional portfolio once that site is deployed.

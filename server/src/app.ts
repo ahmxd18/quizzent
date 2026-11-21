@@ -12,11 +12,16 @@ import { createGuestResultsRouter } from './features/results/results.routes.js'
 import { createAdminRouter } from './features/admin/admin.routes.js'
 import type { RoomChanged } from './features/lobby/lobby.server.js'
 import { apiHeaders } from './middleware/api-headers.js'
+import { createFrontendRouter } from './frontend.js'
+import type { ServerSettings } from './runtime-config.js'
 
-export function createApp(database: Pool, roomChanged?: RoomChanged) {
+export function createApp(database: Pool, roomChanged?: RoomChanged, settings: ServerSettings = {}) {
   const app = express()
   app.disable('x-powered-by')
-  app.use(apiHeaders)
+  app.set('trust proxy', settings.trustedProxyHops ?? false)
+  // Development is API-only; production serves the React build on this same origin.
+  if (settings.frontend) app.use('/api', apiHeaders)
+  else app.use(apiHeaders)
   app.use(cookieParser())
 
   // This checks the API process; PostgreSQL availability is checked separately.
@@ -33,6 +38,8 @@ export function createApp(database: Pool, roomChanged?: RoomChanged) {
   app.use('/api/guest/rooms', createGuestResultsRouter(database))
   app.use('/api/guest', createGuestRouter(database))
   app.use('/api/room-entry', createRoomEntryRouter(database, roomChanged))
+  app.use('/api', (_request, response) => response.status(404).json({ message: 'Route not found' }))
+  if (settings.frontend) app.use(createFrontendRouter(settings.frontend))
   app.use((_request, response) => {
     response.status(404).json({ message: 'Route not found' })
   })
