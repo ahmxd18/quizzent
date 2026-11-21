@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: quizzent
+    runtime: node
+    plan: free
+    branch: main
+    autoDeployTrigger: "off"
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run db:migrate && npm run start:server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
