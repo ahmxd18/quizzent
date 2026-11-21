@@ -3,6 +3,7 @@ services:
     name: quizzent
     runtime: node
     plan: free
+    region: ohio
     branch: main
     autoDeployTrigger: "off"
     buildCommand: npm ci --include=dev && npm run build
