@@ -6,6 +6,8 @@ import { publishFinishedRooms } from '../results/publish-results.js'
 export function startTimeoutWorker(database: Pool) {
   let stopped = false
   let pending: Promise<void> | undefined
+  let timer: NodeJS.Timeout | undefined
+  let requested = false
 
   async function sweep() {
     const { rows } = await database.query<{ room_id: string; guest_id: string }>(
@@ -22,19 +24,38 @@ export function startTimeoutWorker(database: Pool) {
         if (!(error instanceof RoomError)) throw error
       }
     }
-    if (!stopped) await publishFinishedRooms(database)
+    if (stopped) return false
+    await publishFinishedRooms(database)
+    const { rows: [state] } = await database.query<{ active: boolean }>(
+      "SELECT EXISTS (SELECT 1 FROM rooms WHERE status = 'open' AND started_at IS NOT NULL) AS active",
+    )
+    return state.active
   }
 
-  const timer = setInterval(() => {
-    if (pending) return
+  function run() {
+    timer = undefined
+    if (stopped) return
+    requested = false
     pending = sweep()
-      .catch(() => { console.error('Could not update timed attempts or final results.') })
-      .finally(() => { pending = undefined })
-  }, 500).unref()
+      .then(active => { if (active) requested = true })
+      .catch(() => { requested = true; console.error('Could not update timed attempts or final results.') })
+      .finally(() => {
+        pending = undefined
+        if (requested && !stopped) timer = setTimeout(run, 500).unref()
+      })
+  }
 
-  return async function stop() {
-    stopped = true
-    clearInterval(timer)
-    await pending
+  return {
+    wake() {
+      if (stopped) return
+      requested = true
+      // A committed lobby change wakes us. No idle queries keep a free database awake.
+      if (!pending && !timer) timer = setTimeout(run, 0).unref()
+    },
+    async stop() {
+      stopped = true
+      clearTimeout(timer)
+      await pending
+    },
   }
 }
