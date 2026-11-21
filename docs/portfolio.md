@@ -2,7 +2,8 @@
 
 ## Suggested resume entry
 
-**Quizzent — Real-time quiz competition platform**  
+**Quizzent — Real-time quiz competition platform**
+
 React · TypeScript · Node.js · Express · PostgreSQL · Socket.IO
 
 - Built organiser publishing, guest admission, live readiness, timed MCQ attempts and shared-rank leaderboards, with a 50-competitor room cap.
