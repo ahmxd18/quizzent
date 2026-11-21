@@ -108,6 +108,57 @@ try {
   await admin.getByText('Page 1 of 2 · 28 records', { exact: true }).waitFor()
   assert.equal(await admin.locator('tbody tr').count(), 25)
   await admin.getByRole('button', { name: /Organisers All organisers/ }).click()
+  async function checkOptionArea(page, touch = false) {
+    const option = page.locator('label').filter({ hasText: 'Room Host · host@example.test' })
+    const checkbox = page.getByRole('checkbox', { name: /Room Host/ })
+    const search = page.getByLabel('Find organisers')
+    async function assertOpen() {
+      assert.equal(await page.getByRole('button', { name: /^Organisers / }).getAttribute('aria-expanded'), 'true')
+      assert.ok(await search.isVisible())
+    }
+    // Start with focus in search, then click padding rather than the checkbox or text.
+    for (const area of ['padding', 'text', 'right edge']) {
+      await search.focus()
+      const box = await option.boundingBox()
+      assert.ok(box)
+      const target = area === 'text' ? option.locator('span') : option
+      const position = area === 'padding' ? { x: 2, y: 2 } : area === 'right edge' ? { x: box.width - 3, y: box.height / 2 } : undefined
+      await target[touch ? 'tap' : 'click']({ position })
+      assert.ok(await checkbox.isChecked(), `${area} selects the organiser`)
+      await assertOpen()
+      await target[touch ? 'tap' : 'click']({ position })
+      assert.equal(await checkbox.isChecked(), false, `${area} deselects the organiser`)
+      await assertOpen()
+    }
+    await checkbox.focus()
+    await page.keyboard.press('Space')
+    assert.ok(await checkbox.isChecked())
+    await page.getByRole('checkbox', { name: /Candidate/ }).check()
+    assert.ok(await checkbox.isChecked(), 'Selecting a second organiser preserves the first')
+    await assertOpen()
+    await page.getByRole('heading', { name: 'Competitions and rooms' }).click()
+    await search.waitFor({ state: 'hidden' })
+    await page.getByRole('button', { name: /^Organisers / }).click()
+    assert.ok(await checkbox.isChecked(), 'Reopening retains the selection')
+    await page.getByRole('button', { name: 'Clear selection', exact: true }).click()
+    await assertOpen()
+    await checkbox.focus()
+    await page.keyboard.press('Escape')
+    await search.waitFor({ state: 'hidden' })
+    await page.getByRole('button', { name: /Organisers All organisers/ }).click()
+    // Non-control content inside the panel must not dismiss it either.
+    await page.locator('label').filter({ hasText: 'Find organisers' }).click()
+    await assertOpen()
+  }
+  await checkOptionArea(admin)
+  const touchAdmin = await browser.newPage({ viewport: { width: 375, height: 815 }, isMobile: true, hasTouch: true,
+    storageState: await admin.context().storageState() })
+  touchAdmin.setDefaultTimeout(12_000)
+  touchAdmin.on('pageerror', error => errors.push(error.message))
+  await touchAdmin.goto(base + '/admin/directory')
+  await touchAdmin.getByRole('button', { name: /Organisers All organisers/ }).click()
+  await checkOptionArea(touchAdmin, true)
+  await touchAdmin.close()
   const hostLabel = admin.locator('label').filter({ hasText: 'Room Host · host@example.test' })
   await hostLabel.locator('span').click()
   assert.ok(await admin.getByRole('checkbox', { name: /Room Host/ }).isChecked())
