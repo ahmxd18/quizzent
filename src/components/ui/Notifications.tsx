@@ -41,7 +41,7 @@ function Toast({ item }: { item: Notification }) {
         <span className="mt-1 block break-words text-sm leading-relaxed text-foreground">{item.message}</span>
       </span>
     </button>
-    <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-surface-strong">
+    <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-surface-strong">
       <span ref={lineRef} className={`block h-full w-full origin-left ${line}`} />
     </span>
   </div>
