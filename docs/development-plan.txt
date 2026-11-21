@@ -171,14 +171,20 @@ FIRST FEATURES — SMALL BACKEND/FRONTEND SLICES
 
 FINISH AND PRESENT
 
-18. [ ] MVP hardening
+18. [x] MVP hardening
     Review validation, authorisation, rate limits, session/CSRF controls, and error messages.
     Run an end-to-end organiser + guest journey and concurrency regression checks.
     Load-test the target 30–50 competitors; document measured results honestly.
     Review accessibility, colour contrast, mobile layouts, and secrets in tracked files.
+    Added exact Origin checks, API response headers, account write budgets and
+    participant readiness limits. Checks: 77 server tests, Edge UI journey with
+    axe accessibility scans, zero npm audit advisories, and measured 30/50 guest
+    load runs without errors. See docs/mvp-hardening.md for results and limits.
 
 19. [ ] Free/minimal-cost deployment and portfolio documentation
-    Compare current free hosting limits before choosing providers or creating accounts.
+    Target zero rupees for hosting. Compare current free-tier limits before choosing
+    providers or creating accounts; consider a paid option only by separate agreement.
+    Add a developer portfolio footer link once the portfolio has a deployed URL.
     Verify persistent connections, idle suspension, database limits, and outage behaviour.
     Add deployment configuration, production session settings, logs, and backup guidance.
     Keep the frontend and API deployment relationship explicit; Vite's proxy is dev-only.
@@ -190,11 +196,10 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–16 and the hosting policy additions were merged through PRs #1–#14.
-Step 17 adds signed-in navigation, stronger admin safeguards, shared controls and
-notifications, multi-organiser directory filtering with pagination totals, and
-homepage polish. The server suite passes 71 checks. Desktop/mobile browser checks
-covered navigation, modal dismissal/focus, notifications, filtering/pagination,
-reduced motion, and closed-room request behavior.
-Next: MVP hardening (step 18), followed by deployment and portfolio documentation
-(step 19).
+Steps 01–17 and the hosting policy additions were merged through PRs #1–#15.
+Step 18 adds application hardening and repeatable load/browser checks on its own
+feature branch. All 77 server checks pass. The 30/50 competitor scenarios completed
+without errors; Edge and axe checks covered the full organiser/guest journey and
+shared UI regressions. See docs/mvp-hardening.md for measurements and limitations.
+Next: deployment and portfolio documentation (step 19), once this branch is merged.
+Production hosting has not yet been configured or validated.

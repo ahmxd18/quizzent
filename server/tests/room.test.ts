@@ -357,6 +357,19 @@ test('rooms and guest admission', async context => {
         assert.equal((await second.timeout(2_000).emitWithAck('lobby:ready', false)).ok, true)
         assert.equal((await updated).readyCount, 0)
 
+        // Switching tabs must not reset the same participant's readiness budget.
+        let blocked = false
+        for (let index = 0; index < 21; index++) {
+          const result = await second.timeout(2_000).emitWithAck('lobby:ready', false)
+          if (!result.ok) {
+            assert.match(result.message, /Too many readiness changes/)
+            blocked = true
+            break
+          }
+        }
+        assert.equal(blocked, true)
+        assert.match((await first.timeout(2_000).emitWithAck('lobby:ready', true)).message, /Too many readiness changes/)
+
         const closed = waitFor(first, 'lobby:room-changed')
         assert.equal((await send(`/rooms/${liveRoom.id}/close`, 'POST', {})).status, 200)
         await closed

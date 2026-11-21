@@ -1,3 +1,4 @@
+import { accountWriteLimit } from '../auth/account-write-limit.js'
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
 import type { Pool } from 'pg'
@@ -18,7 +19,7 @@ const searchSchema = z.string().trim().max(100).transform(value => value.toLower
 
 export function createAdminRouter(database: Pool, roomChanged?: RoomChanged) {
   const router = express.Router()
-  router.use(noStore, requireSameOriginRequest, requireSession(database), (_request, response, next) => {
+  router.use(noStore, requireSameOriginRequest, requireSession(database), accountWriteLimit(), (_request, response, next) => {
     const user: SessionUser = response.locals.user
     if (user.role !== 'superadmin') {
       response.status(403).json({ message: 'Superadmin access is required.' })

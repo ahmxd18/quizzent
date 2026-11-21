@@ -7,8 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       // Browser requests to /api go to Express during local development.
-      '/api': 'http://127.0.0.1:3001',
-      '/socket.io': { target: 'http://127.0.0.1:3001', ws: true },
+      // Keep the browser's Host so the API and WebSocket Origin checks agree.
+      '/api': { target: 'http://127.0.0.1:3001', changeOrigin: false },
+      '/socket.io': { target: 'http://127.0.0.1:3001', ws: true, changeOrigin: false },
     },
   },
 })

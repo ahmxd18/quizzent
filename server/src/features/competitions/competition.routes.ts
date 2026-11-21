@@ -1,3 +1,4 @@
+import { accountWriteLimit } from '../auth/account-write-limit.js'
 import express from 'express'
 import type { Pool } from 'pg'
 import { z } from 'zod'
@@ -11,7 +12,7 @@ import { publishCompetition } from './publication.service.js'
 export function createCompetitionRouter(database: Pool) {
   const router = express.Router()
   router.use((_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); next() })
-  router.use(requireSameOriginRequest, requireSession(database))
+  router.use(requireSameOriginRequest, requireSession(database), accountWriteLimit())
   router.use((request, response, next) => {
     if (['POST', 'PUT'].includes(request.method) && !request.is('application/json')) {
       response.status(415).json({ message: 'Send competition details as JSON.' }); return

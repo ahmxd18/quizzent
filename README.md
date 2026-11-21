@@ -4,9 +4,9 @@ A real-time online MCQ competition platform, built step by step as a learning an
 
 ## Current status
 
-Organisers can publish MCQ competitions, host a room, and see guest progress. Admitted guests answer one timed question at a time. When everyone finishes, Quizzent publishes the leaderboard and each guest can review their own answers. [Quiz results guide](docs/quiz-results.md)
+Organisers can publish MCQ competitions, host a room, and see guest progress. Admitted guests answer one timed question at a time. When everyone finishes, Quizzent publishes the leaderboard and each guest can review their own answers. [Quiz results guide](docs/competition-runtime.md#results-and-organiser-progress)
 
-Organisers can cancel a running quiz with a reason. The server also cancels interrupted quizzes when it restarts. [Cancellation and recovery guide](docs/competition-cancellation.md)
+Organisers can cancel a running quiz with a reason. The server also cancels interrupted quizzes when it restarts. [Cancellation and recovery guide](docs/competition-runtime.md#cancellation-and-recovery)
 
 Superadmins can manage accounts, cancel open rooms, and review recent admin activity. [Superadmin setup guide](docs/superadmin-controls.md)
 
@@ -86,8 +86,8 @@ docs/
   development-plan.txt Ordered milestones and checks
   postgresql-setup.md   Local setup and plain-language database explanations
   database-schema.md    Account/session tables and migration commands
-  organiser-signup.md   Signup API, hashing, validation, and frontend flow
-  organiser-login.md    Login, cookies, session expiry, logout, and frontend flow
+  authentication.md    Signup/login API, hashing, cookies, sessions and frontend flow
+  competition-runtime.md Readiness, timed answers, results and outage handling
   competition-drafts.md Draft API, ownership, database fields, and editor behavior
   questions-and-publication.md Question IDs, transactions, publishing, and frozen content
   room-admission.md    Room codes, invitations, participant identity, and cookies
@@ -98,13 +98,13 @@ Keep generic primitives in `src/components/`. Feature-specific UI goes in `src/f
 
 Public routes include `/`, `/join`, `/join/:code`, `/rooms/:id`, `/login`, and `/signup`. Organiser routes live under `/organiser` and require login, including `/organiser/rooms/:id`. Hosting must eventually serve `index.html` for frontend routes while preserving `/api` handling; the Vite development server already supports direct route loading.
 
-To try authentication, create an account at `/signup`, continue to `/login`, and enter its email and password. Refresh `/organiser` to check session restoration, then log out. API clients testing login/logout must send `X-Quizzent-Request: 1` and retain the response cookie. See the [login guide](docs/organiser-login.md).
+To try authentication, create an account at `/signup`, continue to `/login`, and enter its email and password. Refresh `/organiser` to check session restoration, then log out. API clients testing login/logout must send `X-Quizzent-Request: 1` and retain the response cookie. See the [login guide](docs/authentication.md#login-and-sessions).
 
 From `/organiser`, choose Create your first competition. Save a title, optional description, and question time (default 10 seconds, allowed 5–120). The draft appears in your library; select Edit draft to update it. Saving does not publish or open a room. See the [draft guide](docs/competition-drafts.md).
 
 Choose Manage questions from the competition details. Save each question with four distinct options and one correct answer. Review before choosing Publish competition: publication permanently locks content/settings through the API and does not open a live room. See the [questions and publication guide](docs/questions-and-publication.md).
 
-Choose **Host room** on a published competition. Share the room code if open admission is allowed, or create a personal invitation with a reference you recognise. From another browser profile, join and mark yourself ready to see the organiser roster update automatically. See the [room admission guide](docs/room-admission.md) and the [live lobby guide](docs/live-lobby.md).
+Choose **Host room** on a published competition. Share the room code if open admission is allowed, or create a personal invitation with a reference you recognise. From another browser profile, join and mark yourself ready to see the organiser roster update automatically. See the [room admission guide](docs/room-admission.md) and the [live lobby guide](docs/competition-runtime.md#lobby-and-readiness).
 
 ## Stack
 
@@ -133,3 +133,7 @@ The initial commit on `main` contains setup only. Continue work on a separate fe
 Foundation, signup, login, drafts, and question editing/publication were merged through [PRs #1–#5](https://github.com/ahmxd18/quizzent/pulls?q=is%3Apr+is%3Amerged). Finish and merge each feature before starting its successor from main.
 
 Explain unfamiliar TypeScript, Socket.IO, and PostgreSQL concepts briefly as they appear. Use short, natural code comments where they clarify a decision. Never commit real credentials or `.env` files.
+
+## MVP verification
+
+Run `npm run test:server` for the database/security/concurrency suite, `npm run test:load` for the 30/50 competitor scenarios, and `npm run test:browser` for the Edge UI and axe accessibility checks. These use disposable database schemas; configure a local development database first. The browser command uses installed Microsoft Edge, with optional Chrome/executable overrides. See the [MVP hardening report](docs/mvp-hardening.md) for setup, measured results and deployment boundaries.
