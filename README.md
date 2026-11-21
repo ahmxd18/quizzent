@@ -133,3 +133,7 @@ The initial commit on `main` contains setup only. Continue work on a separate fe
 Foundation, signup, login, drafts, and question editing/publication were merged through [PRs #1–#5](https://github.com/ahmxd18/quizzent/pulls?q=is%3Apr+is%3Amerged). Finish and merge each feature before starting its successor from main.
 
 Explain unfamiliar TypeScript, Socket.IO, and PostgreSQL concepts briefly as they appear. Use short, natural code comments where they clarify a decision. Never commit real credentials or `.env` files.
+
+## MVP verification
+
+Run `npm run test:server` for the database/security/concurrency suite, `npm run test:load` for the 30/50 competitor scenarios, and `npm run test:browser` for the Edge UI and axe accessibility checks. These use disposable database schemas; configure a local development database first. The browser command uses installed Microsoft Edge, with optional Chrome/executable overrides. See the [MVP hardening report](docs/mvp-hardening.md) for setup, measured results and deployment boundaries.
