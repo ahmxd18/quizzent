@@ -68,7 +68,7 @@ Each scenario signs up/logs in an organiser, creates and publishes questions thr
 
 The final Edge run on 2026-11-21 passed the full journey and all 14 axe scans with no detected violations in the selected WCAG A/AA rule sets.
 
-The browser check covers signed-in/out navigation, direct signup redirects, organiser label/checkbox selection and deselection, combined directory filters, 10/25 row pagination, responsive layouts, modal outside-click/Escape/focus restoration, password-protected suspension, and closed-room request behaviour. It checks notification countdown, hover pause, whole-card dismissal, and desktop top-right positioning.
+The browser check covers signed-in/out navigation, direct signup redirects, organiser full-row selection and deselection (text, padding and right edge on desktop and touch), combined directory filters, 10/25 row pagination, responsive layouts, modal outside-click/Escape/focus restoration, password-protected suspension, and closed-room request behaviour. It checks notification countdown, hover pause, whole-card dismissal, and desktop top-right positioning.
 
 The complete UI journey creates a draft, saves a question, publishes, opens a room, joins in a separate guest context, becomes ready, answers, views results, and restores the guest result after refresh. axe checks run against home, signup/login, admin directory, the admin modal, organiser space/question editing/live room, guest admission/lobby/question/results. The run checks horizontal overflow at mobile widths and retains the directory's intentional internal table scrolling. The homepage demo also supports pause and reduced motion.
 

@@ -182,7 +182,9 @@ FINISH AND PRESENT
     load runs without errors. See docs/mvp-hardening.md for results and limits.
 
 19. [ ] Free/minimal-cost deployment and portfolio documentation
-    Compare current free hosting limits before choosing providers or creating accounts.
+    Target zero rupees for hosting. Compare current free-tier limits before choosing
+    providers or creating accounts; consider a paid option only by separate agreement.
+    Add a developer portfolio footer link once the portfolio has a deployed URL.
     Verify persistent connections, idle suspension, database limits, and outage behaviour.
     Add deployment configuration, production session settings, logs, and backup guidance.
     Keep the frontend and API deployment relationship explicit; Vite's proxy is dev-only.
@@ -199,5 +201,5 @@ Step 18 adds application hardening and repeatable load/browser checks on its own
 feature branch. All 77 server checks pass. The 30/50 competitor scenarios completed
 without errors; Edge and axe checks covered the full organiser/guest journey and
 shared UI regressions. See docs/mvp-hardening.md for measurements and limitations.
-Next: review and merge Step 18, then deployment and portfolio documentation
-(step 19). Production hosting has not yet been configured or validated.
+Next: deployment and portfolio documentation (step 19), once this branch is merged.
+Production hosting has not yet been configured or validated.

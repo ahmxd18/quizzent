@@ -21,7 +21,7 @@ does not admit guests, generate a code, or open a live room.
 
 These endpoints inherit session, ownership, no-store, and write-request guards
 from the competition router. Correct answers are returned only to the authenticated
-owner; future competitor endpoints must use separate responses without keys.
+owner; competitor endpoints use separate responses without keys.
 
 | Method | Endpoint | Result |
 | --- | --- | --- |
@@ -92,8 +92,8 @@ last-save-wins; there is no collaborative conflict resolution.
 
 ## Verification
 
-Build and lint pass. All 39 database/API checks pass in disposable schemas. New
-coverage includes validation, ownership, stable IDs, concurrent additions, a correct
+Run `npm run test:server` for the current checks in disposable schemas.
+Question coverage includes validation, ownership, stable IDs, concurrent additions, a correct
 answer belonging to another question, removal/cascade, invalid stored content at
 publication, post-publication write rejection, and concurrent edit vs publication.
 
