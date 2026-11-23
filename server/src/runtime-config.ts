@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 
 export type FrontendSettings = { directory: string; origin: string }
-export type ServerSettings = { host?: string; trustedProxyHops?: number; frontend?: FrontendSettings }
+export type ServerSettings = { host?: string; trustedProxyHops?: number; renderIngress?: boolean; frontend?: FrontendSettings }
 
 export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env) {
   const production = env.NODE_ENV === 'production'
@@ -21,5 +21,5 @@ export function readRuntimeConfig(env: NodeJS.ProcessEnv = process.env) {
     }
     frontend = { origin: url.origin, directory: fileURLToPath(new URL('../../dist/', import.meta.url)) }
   }
-  return { port, host, trustedProxyHops, frontend }
+  return { port, host, trustedProxyHops, renderIngress: env.RENDER === 'true' && trustedProxyHops === 1, frontend }
 }
