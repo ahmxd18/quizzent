@@ -85,6 +85,8 @@ test('Render ingress uses the visitor budget and ignores forged earlier forwarde
     assert.match(await budget('198.51.100.88, 192.0.2.10, ::ffff:172.68.2.1'), /r=297;/)
     assert.match(await budget('192.0.2.11, 2606:4700::1'), /r=299;/)
     assert.match(await budget('203.0.113.77, 192.0.2.10'), /r=296;/)
+    assert.match(await budget('203.0.113.88, 192.0.2.10, 172.68.1.1, 10.226.90.65'), /r=295;/)
+    assert.match(await budget('203.0.113.88, 192.0.2.10, 104.16.1.1, ::ffff:10.226.252.196'), /r=294;/)
     assert.equal(readRuntimeConfig({ RENDER: 'true', TRUST_PROXY_HOPS: '1' }).renderIngress, true)
     assert.equal(readRuntimeConfig({ RENDER: 'true' }).renderIngress, false)
   } finally {
