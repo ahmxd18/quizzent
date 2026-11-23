@@ -195,7 +195,7 @@ FINISH AND PRESENT
         and a snapshot backup/restore with matching counts across 16 tables.
     [x] Create release/dev with PR-only protection, including administrators;
         block force pushes/deletion and document the release/database workflow.
-    [ ] Switch the existing Render service/Blueprint to release/dev and verify
+    [x] Switch the existing Render service/Blueprint to release/dev and verify
         the final client-IP correction through the hosted ingress.
     [ ] Record a timed cold start and confirm separate physical-network budgets.
         Review quotas periodically; do not deliberately exhaust the free plan.
@@ -216,6 +216,6 @@ PR #18 added repeatable hosted checks and the initial bounded proxy-trust fix.
 All 81 server checks and hosted 30/50 browser-HTTP scenarios pass. Backup/restore
 and server-outage cancellation passed. Keep earlier Node HTTP deadline failures
 visible in docs/deployment.md; these tests are not a general capacity guarantee.
-Step 19 remains open for final ingress/cutover and the explicit operational checks
-listed above. The footer's portfolio destination can be updated after deployment
+The release/dev cutover and final hosted client-IP check passed. Step 19 remains
+open only for timed cold-start and physical second-network checks listed above. The footer's portfolio destination can be updated after deployment
 of the developer's own portfolio. Do not deploy during a running competition.
