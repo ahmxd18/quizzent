@@ -190,8 +190,15 @@ FINISH AND PRESENT
     [x] Serve the production React build through Express with document headers.
     [x] Stop idle timeout-worker polling; add regression checks.
     [x] Add real screenshots, architecture and interview notes.
-    [ ] Provision free resources and verify the live URL, TLS, proxy/client IP,
-        WebSockets, cold starts, quota behaviour and backup/restore.
+    [x] Provision Render Free + Neon Free in Ohio; verify HTTPS, sessions, WSS,
+        organiser/guest UI, 30/50 competitor scenarios, outage cancellation,
+        and a snapshot backup/restore with matching counts across 16 tables.
+    [x] Create release/dev with PR-only protection, including administrators;
+        block force pushes/deletion and document the release/database workflow.
+    [ ] Switch the existing Render service/Blueprint to release/dev and verify
+        the final client-IP correction through the hosted ingress.
+    [ ] Record a timed cold start and confirm separate physical-network budgets.
+        Review quotas periodically; do not deliberately exhaust the free plan.
     Add deployment configuration, production session settings, logs, and backup guidance.
     Keep the frontend and API deployment relationship explicit; Vite's proxy is dev-only.
     Finish README screenshots, architecture diagram, setup guide, and interview notes.
@@ -202,10 +209,13 @@ Redis, microservices, multi-region hosting, proctoring, question banks, teams,
 multiple question types, and a general configurable scoring engine.
 
 CURRENT BOUNDARY
-Steps 01–18 are merged through PR #16. The footer credit was pushed directly to
-main at the user’s request. Step 19 is in progress on codex/deployment-portfolio.
-Local hosting preparation passes 80 server checks and 30/50 competitor scenarios.
-The README, deployment guide and interview notes distinguish local evidence from
-hosted claims. No public deployment has been provisioned or verified yet.
-Next: review the deployment PR, create the free resources, then run the hosted
-verification and backup/restore checks in docs/deployment.md.
+Steps 01–18 and deployment preparation are merged. The public demo is running
+at https://quizzent-076x.onrender.com using Render Free and Neon Free.
+The owner's initial superadmin is provisioned; previous sessions were revoked.
+PR #18 added repeatable hosted checks and the initial bounded proxy-trust fix.
+All 81 server checks and hosted 30/50 browser-HTTP scenarios pass. Backup/restore
+and server-outage cancellation passed. Keep earlier Node HTTP deadline failures
+visible in docs/deployment.md; these tests are not a general capacity guarantee.
+Step 19 remains open for final ingress/cutover and the explicit operational checks
+listed above. The footer's portfolio destination can be updated after deployment
+of the developer's own portfolio. Do not deploy during a running competition.

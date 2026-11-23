@@ -4,7 +4,7 @@ Real-time quiz competitions with server-controlled timing, guest participation a
 
 Built with **React, TypeScript, Express, PostgreSQL and Socket.IO** as a learning and portfolio project. Organisers publish MCQs, invite guests into a live lobby, and follow their progress. Guests need no account: each gets a private session and a stable participant record, separate from their nickname.
 
-**Deployment status:** local MVP verified; free-hosting configuration is prepared. A public demo URL will be added after hosted verification. See the [deployment guide](docs/deployment.md).
+**Live demo:** [quizzent-076x.onrender.com](https://quizzent-076x.onrender.com) — hosted on Render Free with Neon Free PostgreSQL. Free services can sleep; open the demo before presenting. See the [deployment checks and limits](docs/deployment.md).
 
 ## In the app
 
@@ -68,17 +68,21 @@ The API defaults to `127.0.0.1:3001`; `GET /api/health` checks the process, not 
 | --- | --- |
 | `npm run build` | Production React assets and compiled server |
 | `npm run lint` | Static code checks |
-| `npm run test:server` | 80 schema, API, security, concurrency, timing and hosting checks |
+| `npm run test:server` | 81 schema, API, security, concurrency, timing and hosting checks |
 | `npm run test:load` | Real HTTP/WebSocket scenarios with 30 and 50 competitors |
 | `npm run test:browser` | Edge desktop/touch flows, axe scans, built-frontend smoke check and screenshots |
+| `npm run test:hosted` | Explicit HTTPS origin, security smoke and 30/50 competitor scenarios |
+| `npm run test:hosted:browser` | Hosted organiser/guest UI, production cookies, CSP and accessibility |
 
 Database checks use disposable PostgreSQL schemas; run them against a development database. Browser checks use installed Edge by default; set `BROWSER_CHANNEL=chrome` or `BROWSER_EXECUTABLE` for another compatible installed Chromium browser. Build first so the built-frontend check can find `dist/`.
 
 The latest local deployment-preparation scenarios completed with **no errors at 30 or 50 competitors**. At 50 competitors, answer-submission p95 was **25 ms**: 95% of sampled submissions finished within that time. All 50 deliberately unanswered final questions timed out and produced the expected saved results. This is a short local scenario on Node 26.5.0 with a five-connection PostgreSQL pool, not a hosted capacity or availability claim. The [hardening report](docs/mvp-hardening.md) preserves the original Step 18 measurements and security review.
 
+Hosted on 2026-11-23: the browser-HTTP/Socket.IO scenario completed with zero errors at 30 and 50 competitors; 50-competitor answer p95 was **1,086 ms**. This is an end-to-end test from one client machine, not server-only latency or a capacity guarantee. Earlier Node HTTP runs were slower and the 50-competitor run missed deadlines; the [deployment report](docs/deployment.md#hosted-evidence--2026-11-23) records both results.
+
 ## Deployment and limits
 
-The proposed ₹0 demo uses one Render Free web service and Neon Free PostgreSQL. `render.yaml` configures manual releases, a health check, migrations before startup and secret injection. See [deployment instructions and pending hosted checks](docs/deployment.md); free services can sleep or suspend at quota limits.
+The ₹0 demo uses one Render Free web service and Neon Free PostgreSQL. `render.yaml` configures manual releases, a health check, migrations before startup and secret injection. See [deployment instructions and hosted evidence](docs/deployment.md); free services can sleep or suspend at quota limits.
 
 Published competition content is frozen through the API. Guest names are not verified identities. A copied session cookie is a bearer credential until expiry/revocation. This MVP does not provide MFA, password recovery, distributed rate limits, proctoring or validated multi-room hosted capacity. Restarting/redeploying during a running quiz cancels it by design; deploy between competitions.
 
