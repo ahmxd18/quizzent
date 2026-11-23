@@ -8,9 +8,9 @@ React · TypeScript · Node.js · Express · PostgreSQL · Socket.IO
 
 - Built organiser publishing, guest admission, live readiness, timed MCQ attempts and shared-rank leaderboards, with a 50-competitor room cap.
 - Used PostgreSQL transactions, row locks and uniqueness constraints to protect concurrent admission, immutable answers, idempotent retries and result publication.
-- Added server-side sessions, ownership checks, superadmin reauthentication, account restrictions and request budgets; verified with 80 server checks and an automated browser/accessibility journey.
+- Added server-side sessions, ownership checks, superadmin reauthentication, account restrictions and request budgets; verified with 81 server checks and an automated browser/accessibility journey.
 
-If adding performance evidence, say **“Locally load-tested 50 simultaneous competitors with no scenario errors.”** The latest local deployment-preparation run measured answer-submission p95 at 25 ms. Do not describe this as hosted capacity or an uptime guarantee. Retest after deployment and keep the date/environment with the result.
+If adding performance evidence, say **“Locally load-tested 50 simultaneous competitors with no scenario errors.”** The latest local deployment-preparation run measured answer-submission p95 at 25 ms. Do not describe this as hosted capacity or an uptime guarantee. The hosted browser-HTTP/Socket.IO test on 2026-11-23 also completed at 50 competitors with no scenario errors and answer p95 of 1,086 ms. Say exactly which environment and client transport were tested; earlier Node HTTP runs missed deadlines at 50 competitors. This is a demo workload, not a capacity guarantee.
 
 ## A short interview walkthrough
 
@@ -40,5 +40,5 @@ Use disposable accounts and rooms, keep admin credentials private, and open a fr
 - The README's screenshots are captured from the running app with disposable data.
 - `npm run test:server`, `npm run test:browser` and `npm run test:load` are runnable checks, not just claims in a document.
 - [MVP hardening](mvp-hardening.md) records the original local measurements and security boundaries.
-- [Deployment](deployment.md) separates tested local preparation from checks still pending on the public service.
-- Add the live demo URL only after verification. Replace the footer's temporary GitHub destination when the developer portfolio is deployed.
+- [Deployment](deployment.md) records hosted checks, failed earlier measurements, backup/restore evidence and remaining operational checks.
+- Live demo: https://quizzent-076x.onrender.com. Replace the footer's temporary GitHub destination when the developer portfolio is deployed.
