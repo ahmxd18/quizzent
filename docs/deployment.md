@@ -30,7 +30,7 @@ The URL contains a database password. It is a secret, not the public website add
 
 ## 2. Create the web service
 
-After this feature branch is reviewed/merged, create a **Blueprint** in Render and connect `ahmxd18/quizzent`, branch `main`. `render.yaml` defines one free Node service and no billable database/worker resources. Confirm the plan and region before creating it.
+For a fresh setup, create a **Blueprint** in Render and connect `ahmxd18/quizzent`, branch `release/dev`. The existing deployment is already configured; do not create a duplicate service. `render.yaml` defines one free Node service and no billable database/worker resources. Confirm the plan and region before creating it.
 
 When prompted for `DATABASE_URL`, paste the Neon **direct** connection string into Render's environment-secret field. Render supplies `PORT` and `RENDER_EXTERNAL_URL`; the latter supplies the public HTTPS origin unless `PUBLIC_ORIGIN` is explicitly set.
 
@@ -63,7 +63,7 @@ This deliberately does not load `server/.env`, so it cannot silently bootstrap y
 
 ## Hosted evidence — 2026-11-23
 
-The production source branch is `release/dev`; releases are manual. The initial superadmin was provisioned with the existing local bootstrap service. Its previous organiser sessions were revoked; the owner must log in again. No password, cookie, database URL or dump is stored in the repository.
+The production source branch is `release/dev`; releases are manual. PR #20 was deployed successfully through the existing Blueprint on 2026-11-23. The Blueprint also tracks `release/dev`, with auto-sync off. The initial superadmin was provisioned with the existing local bootstrap service. Its previous organiser sessions were revoked; the owner must log in again. No password, cookie, database URL or dump is stored in the repository.
 
 Verified against the public HTTPS service:
 
@@ -84,6 +84,8 @@ Isolated Chromium contexts supplied real HTTPS cookie sessions and HTTP requests
 | 30 | 0 | 1,041 ms | 1,048 ms | 297 ms |
 | 50 | 0 | 1,086 ms | 1,506 ms | 371 ms |
 
+The final release rerun on `fb9f0c4` also passed with zero scenario errors: 30 competitors had answer p95 **691 ms**, maximum **876 ms**, publication lag **688 ms**; 50 competitors had p95 **1,274 ms**, maximum **1,316 ms**, publication lag **706 ms**. The complete UI/accessibility journey passed again after the cutover.
+
 These initial measurements used commit `0350bb3`. Read-only hosted database checks confirmed 30/50 participant results and 90/150 answer-or-timeout resolutions. They demonstrate this short single-room scenario, not sustained load, multiple-room capacity or an availability guarantee.
 
 Earlier attempts used Node HTTP clients. The independent 30-guest run passed with answer p95 8,778 ms; the 50-guest run missed deadlines and received expected stale-answer 409 responses. A separate 20-request Chromium experiment completed in 547–768 ms, prompting the browser-HTTP rerun. The cause of the transport-dependent slowdown is unresolved. Do not present the successful browser measurement as proof that all clients or networks behave identically.
@@ -101,9 +103,9 @@ The hosted commands deliberately do not load local database credentials. Screens
 
 ### Proxy handling and remaining operations
 
-The initial one-hop setting produced rotating rate-limit partition keys for one browser. Render routes requests through Cloudflare and its load balancer. The fix trusts the immediate ingress and, only with Render's platform `RENDER=true` marker and `TRUST_PROXY_HOPS=1`, Cloudflare's published address ranges and the private 10/8 load-balancer address immediately after the socket peer. Other private addresses earlier in the chain are not trusted. Express then stops at the first untrusted visitor address, before caller-supplied earlier entries. Direct/local deployments do not enable this extra trust. Never set `trust proxy: true` or choose an arbitrary larger hop count. Recheck the CIDRs when changing hosting or adding another proxy. [Render ingress](https://render.com/articles/how-render-handles-ddos-attacks), [Express proxy trust](https://expressjs.com/en/guide/behind-proxies/), [Cloudflare ranges](https://www.cloudflare.com/ips/).
+The initial one-hop setting produced rotating rate-limit partition keys for one browser. The first Cloudflare-only correction also left those partitions rotating, because Render appends a private load-balancer address too. Render routes requests through Cloudflare and its load balancer. The fix trusts the immediate ingress and, only with Render's platform `RENDER=true` marker and `TRUST_PROXY_HOPS=1`, Cloudflare's published address ranges and the private 10/8 load-balancer address immediately after the socket peer. Other private addresses earlier in the chain are not trusted. This private-ingress position also appears in [Arcjet's captured Render request](https://github.com/arcjet/arcjet-js/issues/3899). Express then stops at the first untrusted visitor address, before caller-supplied earlier entries. Direct/local deployments do not enable this extra trust. Never set `trust proxy: true` or choose an arbitrary larger hop count. Recheck the CIDRs when changing hosting or adding another proxy. [Render ingress](https://render.com/articles/how-render-handles-ddos-attacks), [Express proxy trust](https://expressjs.com/en/guide/behind-proxies/), [Cloudflare ranges](https://www.cloudflare.com/ips/).
 
-- [ ] Verify the deployed proxy fix: a stable budget across ingress addresses, then 429 with Retry-After even when earlier forwarding headers are forged.
+- [x] Verified on release commit `fb9f0c4`: one stable budget across requests, then signup 429 with Retry-After. Forged earlier `X-Forwarded-For` values retained that exhausted budget. Requests also forging provider-specific client-IP headers were rejected with 403; they did not obtain a fresh budget.
 - [ ] Confirm independent budgets from a second real network. Local regression tests cover distinct visitor addresses; a physical second-network check remains separate.
 - [ ] Record a timed cold start after at least 15 idle minutes. An earlier sleeping-service request resumed successfully, but its wake-up time was not measured.
 - Review Render/Neon usage before interviews and after load tests. Quota exhaustion was not deliberately triggered, because it could suspend the demo. Free plans and database auto-suspend remain enabled; no uptime pinger or paid resources were added.

@@ -76,11 +76,13 @@ The API defaults to `127.0.0.1:3001`; `GET /api/health` checks the process, not 
 
 Database checks use disposable PostgreSQL schemas; run them against a development database. Browser checks use installed Edge by default; set `BROWSER_CHANNEL=chrome` or `BROWSER_EXECUTABLE` for another compatible installed Chromium browser. Build first so the built-frontend check can find `dist/`.
 
-The latest local deployment-preparation scenarios completed with **no errors at 30 or 50 competitors**. At 50 competitors, answer-submission p95 was **25 ms**: 95% of sampled submissions finished within that time. All 50 deliberately unanswered final questions timed out and produced the expected saved results. This is a short local scenario on Node 26.5.0 with a five-connection PostgreSQL pool, not a hosted capacity or availability claim. The [hardening report](docs/mvp-hardening.md) preserves the original Step 18 measurements and security review.
+The local deployment-preparation scenarios completed with **no errors at 30 or 50 competitors**. At 50 competitors, answer-submission p95 was **25 ms**: 95% of sampled submissions finished within that time. All 50 deliberately unanswered final questions timed out and produced the expected saved results. This is a short local scenario on Node 26.5.0 with a five-connection PostgreSQL pool, not a hosted capacity or availability claim. The [hardening report](docs/mvp-hardening.md) preserves the original Step 18 measurements and security review.
 
-Hosted on 2026-11-23: the browser-HTTP/Socket.IO scenario completed with zero errors at 30 and 50 competitors; 50-competitor answer p95 was **1,086 ms**. This is an end-to-end test from one client machine, not server-only latency or a capacity guarantee. Earlier Node HTTP runs were slower and the 50-competitor run missed deadlines; the [deployment report](docs/deployment.md#hosted-evidence--2026-11-23) records both results.
+Hosted on 2026-11-23: the browser-HTTP/Socket.IO scenario completed with zero errors at 30 and 50 competitors; 50-competitor answer p95 was **1,274 ms**. This is an end-to-end test from one client machine, not server-only latency or a capacity guarantee. Earlier Node HTTP runs were slower and the 50-competitor run missed deadlines; the [deployment report](docs/deployment.md#hosted-evidence--2026-11-23) records both results.
 
 ## Deployment and limits
+
+Production deploys from protected `release/dev` after a release PR from `main`; automatic deployments are off. The [release walkthrough](docs/deployment.md#deploy-your-next-code-change) explains each step.
 
 The ₹0 demo uses one Render Free web service and Neon Free PostgreSQL. `render.yaml` configures manual releases, a health check, migrations before startup and secret injection. See [deployment instructions and hosted evidence](docs/deployment.md); free services can sleep or suspend at quota limits.
 

@@ -10,7 +10,7 @@ React · TypeScript · Node.js · Express · PostgreSQL · Socket.IO
 - Used PostgreSQL transactions, row locks and uniqueness constraints to protect concurrent admission, immutable answers, idempotent retries and result publication.
 - Added server-side sessions, ownership checks, superadmin reauthentication, account restrictions and request budgets; verified with 81 server checks and an automated browser/accessibility journey.
 
-If adding performance evidence, say **“Locally load-tested 50 simultaneous competitors with no scenario errors.”** The latest local deployment-preparation run measured answer-submission p95 at 25 ms. Do not describe this as hosted capacity or an uptime guarantee. The hosted browser-HTTP/Socket.IO test on 2026-11-23 also completed at 50 competitors with no scenario errors and answer p95 of 1,086 ms. Say exactly which environment and client transport were tested; earlier Node HTTP runs missed deadlines at 50 competitors. This is a demo workload, not a capacity guarantee.
+If adding performance evidence, say **“Locally load-tested 50 simultaneous competitors with no scenario errors.”** A local deployment-preparation run measured answer-submission p95 at 25 ms. Do not describe this as hosted capacity or an uptime guarantee. The hosted browser-HTTP/Socket.IO test on 2026-11-23 also completed at 50 competitors with no scenario errors and answer p95 of 1,274 ms. Say exactly which environment and client transport were tested; earlier Node HTTP runs missed deadlines at 50 competitors. This is a demo workload, not a capacity guarantee.
 
 ## A short interview walkthrough
 
