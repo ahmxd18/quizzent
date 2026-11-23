@@ -66,3 +66,29 @@ test('production frontend preserves API boundaries, security headers and asset c
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+test('Render ingress uses the visitor budget and ignores forged earlier forwarded IPs', async () => {
+  const database = new Pool()
+  const app = createApp(database, undefined, { trustedProxyHops: 1, renderIngress: true })
+  const server = app.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  async function budget(chain: string) {
+    const response = await fetch(base + '/api/room-entry/BAD', { headers: { 'X-Forwarded-For': chain } })
+    await response.text()
+    assert.equal(response.status, 400)
+    return response.headers.get('ratelimit')!
+  }
+  try {
+    assert.match(await budget('192.0.2.10, 172.68.1.1'), /r=299;/)
+    assert.match(await budget('203.0.113.77, 192.0.2.10, 104.16.1.1'), /r=298;/)
+    assert.match(await budget('198.51.100.88, 192.0.2.10, ::ffff:172.68.2.1'), /r=297;/)
+    assert.match(await budget('192.0.2.11, 2606:4700::1'), /r=299;/)
+    assert.match(await budget('203.0.113.77, 192.0.2.10'), /r=296;/)
+    assert.equal(readRuntimeConfig({ RENDER: 'true', TRUST_PROXY_HOPS: '1' }).renderIngress, true)
+    assert.equal(readRuntimeConfig({ RENDER: 'true' }).renderIngress, false)
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
+    await database.end()
+  }
+})

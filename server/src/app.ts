@@ -14,11 +14,12 @@ import type { RoomChanged } from './features/lobby/lobby.server.js'
 import { apiHeaders } from './middleware/api-headers.js'
 import { createFrontendRouter } from './frontend.js'
 import type { ServerSettings } from './runtime-config.js'
+import { proxyTrust } from './lib/proxy-trust.js'
 
 export function createApp(database: Pool, roomChanged?: RoomChanged, settings: ServerSettings = {}) {
   const app = express()
   app.disable('x-powered-by')
-  app.set('trust proxy', settings.trustedProxyHops ?? false)
+  app.set('trust proxy', proxyTrust(settings.trustedProxyHops ?? 0, settings.renderIngress))
   // Development is API-only; production serves the React build on this same origin.
   if (settings.frontend) app.use('/api', apiHeaders)
   else app.use(apiHeaders)
