@@ -18,7 +18,9 @@
     "test:db": "tsc -p server/tsconfig.test.json && node --env-file-if-exists=server/.env --import tsx --test server/tests/database-schema.test.ts",
     "test:load": "tsc -p server/tsconfig.test.json && node --env-file-if-exists=server/.env --import tsx server/checks/load-room.ts",
     "test:server": "tsc -p server/tsconfig.test.json && node --env-file-if-exists=server/.env --import tsx --test --test-concurrency=1 server/tests/*.test.ts",
-    "test:browser": "node --env-file-if-exists=server/.env --import tsx server/checks/browser.mjs"
+    "test:browser": "node --env-file-if-exists=server/.env --import tsx server/checks/browser.mjs",
+    "test:hosted": "tsc -p server/tsconfig.test.json && node --import tsx server/checks/hosted-room.ts",
+    "test:hosted:browser": "node server/checks/hosted-browser.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
